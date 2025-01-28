@@ -1,6 +1,7 @@
 /.vs/
 /[Oo]bj/
 /[Dd]ebug/
+/[Rr]elease/
 /GridFilling/
 *.user
 *.filters
