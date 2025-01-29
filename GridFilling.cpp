@@ -31,16 +31,6 @@ public:
         //    throw new std::exception("子格子不为空");
     }
 
-    void SetOwner(GridGroup* gridGroup)
-    {
-        m_Owner = gridGroup;
-    }
-
-    GridGroup* GetOwner() const
-    {
-        return m_Owner;
-    }
-
     void SetSubGrid(Grid* grid)
     {
         m_SubGrid = grid;
@@ -123,7 +113,6 @@ public:
             if (m_Grids[x][y] == NULL)
             {
                 m_Grids[x][y] = grid;
-                grid->SetOwner(this);
                 m_RecheckRotationValid = true;
                 return true;
 
@@ -415,6 +404,7 @@ public:
         int myWidth = GetWidth();
         int myHeight = GetHeight();
         auto myGrids = GetGridGroup()->GetGrids();
+
         int x, y;
 
         if (trans->GetRotate() == Rotation::_0)
@@ -585,6 +575,20 @@ public:
 
     bool TryAddTransform(GridGroupTransform* trans)
     {
+        int transPosX = trans->GetPosX();
+        int transPosY = trans->GetPosY();
+        int transWidth = trans->GetGridGroup()->GetWidth();
+        int transHeight = trans->GetGridGroup()->GetHeight();
+        auto transGrids = trans->GetGridGroup()->GetGrids();
+
+        int myPosX = GetPosX();
+        int myPosY = GetPosY();
+        int myWidth = GetWidth();
+        int myHeight = GetHeight();
+        auto myGrids = GetGridGroup()->GetGrids();
+
+        int x, y;
+
         //for (auto x = trans->GetPosX(); x < trans->GetPosX() + trans->GetWidth(); x++)
         //{
         //    for (auto y = trans->GetPosY(); y < trans->GetPosY() + trans->GetHeight(); y++)
@@ -597,21 +601,143 @@ public:
         //}
 
         // 将trans放入
-        for (auto x = trans->GetPosX(); x < trans->GetPosX() + trans->GetWidth(); x++)
+        if (trans->GetRotate() == Rotation::_0)
         {
-            for (auto y = trans->GetPosY(); y < trans->GetPosY() + trans->GetHeight(); y++)
+            for (auto _x = transPosX; _x < transPosX + transWidth; _x++)
             {
-                auto transGrid = trans->GetGrid(x, y);
-                if (transGrid != NULL)
+                for (auto _y = transPosY; _y < transPosY + transHeight; _y++)
                 {
-                    auto grid = GetGrid(x, y);
-                    // 这个位置不能放格子，或者已经被占据了，失败
-                    if (grid == NULL || grid->GetSubGrid() != NULL)
+                    x = _x - transPosX;
+                    y = _y - transPosY;
+                    auto transGrid = transGrids[x][y];
+                    //if (transGrid != trans->GetGrid(_x, _y))
+                    //    return false;
+                    if (transGrid != NULL)
                     {
-                        TryRemoveTransform(trans);
-                        return false;
+                        x = _x - myPosX;
+                        y = _y - myPosY;
+                        if (x >= 0 && x < myWidth && y >= 0 && y < myHeight)
+                        {
+                            auto grid = myGrids[x][y];
+                            // 这个位置不能放格子，或者已经被占据了，失败
+                            if (grid->GetSubGrid() != NULL)
+                            {
+                                TryRemoveTransform(trans);
+                                return false;
+                            }
+                            grid->SetSubGrid(transGrid);
+                        }
+                        else
+                        {
+                            TryRemoveTransform(trans);
+                            return false;
+                        }
                     }
-                    grid->SetSubGrid(transGrid);
+                }
+            }
+        }
+        else if (trans->GetRotate() == Rotation::_90)
+        {
+            for (auto _x = transPosX; _x < transPosX + transHeight; _x++)
+            {
+                for (auto _y = transPosY; _y < transPosY + transWidth; _y++)
+                {
+                    x = _y - transPosY;
+                    y = transHeight - (_x - transPosX) - 1;
+                    auto transGrid = transGrids[x][y];
+                    //if (transGrid != trans->GetGrid(_x, _y))
+                    //    return false;
+                    if (transGrid != NULL)
+                    {
+                        x = _x - myPosX;
+                        y = _y - myPosY;
+                        if (x >= 0 && x < myWidth && y >= 0 && y < myHeight)
+                        {
+                            auto grid = myGrids[x][y];
+                            // 这个位置不能放格子，或者已经被占据了，失败
+                            if (grid->GetSubGrid() != NULL)
+                            {
+                                TryRemoveTransform(trans);
+                                return false;
+                            }
+                            grid->SetSubGrid(transGrid);
+                        }
+                        else
+                        {
+                            TryRemoveTransform(trans);
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+        else if (trans->GetRotate() == Rotation::_180)
+        {
+            for (auto _x = transPosX; _x < transPosX + transWidth; _x++)
+            {
+                for (auto _y = transPosY; _y < transPosY + transHeight; _y++)
+                {
+                    x = transHeight - (_x - transPosX) - 1;
+                    y = transWidth - (_y - transPosY) - 1;
+                    auto transGrid = transGrids[x][y];
+                    //if (transGrid != trans->GetGrid(_x, _y))
+                    //    return false;
+                    if (transGrid != NULL)
+                    {
+                        x = _x - myPosX;
+                        y = _y - myPosY;
+                        if (x >= 0 && x < myWidth && y >= 0 && y < myHeight)
+                        {
+                            auto grid = myGrids[x][y];
+                            // 这个位置不能放格子，或者已经被占据了，失败
+                            if (grid->GetSubGrid() != NULL)
+                            {
+                                TryRemoveTransform(trans);
+                                return false;
+                            }
+                            grid->SetSubGrid(transGrid);
+                        }
+                        else
+                        {
+                            TryRemoveTransform(trans);
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+        else if (trans->GetRotate() == Rotation::_270)
+        {
+            for (auto _x = transPosX; _x < transPosX + transHeight; _x++)
+            {
+                for (auto _y = transPosY; _y < transPosY + transWidth; _y++)
+                {
+                    x = transWidth - (_y - transPosY) - 1;
+                    y = _x - transPosX;
+                    auto transGrid = transGrids[x][y];
+                    //if (transGrid != trans->GetGrid(_x, _y))
+                    //    return false;
+                    if (transGrid != NULL)
+                    {
+                        x = _x - myPosX;
+                        y = _y - myPosY;
+                        if (x >= 0 && x < myWidth && y >= 0 && y < myHeight)
+                        {
+                            auto grid = myGrids[x][y];
+                            // 这个位置不能放格子，或者已经被占据了，失败
+                            if (grid->GetSubGrid() != NULL)
+                            {
+                                TryRemoveTransform(trans);
+                                return false;
+                            }
+                            grid->SetSubGrid(transGrid);
+                        }
+                        else
+                        {
+                            TryRemoveTransform(trans);
+                            return false;
+                        }
+                    }
                 }
             }
         }
@@ -625,31 +751,126 @@ public:
 
     bool TryRemoveTransform(GridGroupTransform* trans)
     {
-        if (m_ChildrenCount > 0)
+        int transPosX = trans->GetPosX();
+        int transPosY = trans->GetPosY();
+        int transWidth = trans->GetGridGroup()->GetWidth();
+        int transHeight = trans->GetGridGroup()->GetHeight();
+        auto transGrids = trans->GetGridGroup()->GetGrids();
+
+        int myPosX = GetPosX();
+        int myPosY = GetPosY();
+        int myWidth = GetWidth();
+        int myHeight = GetHeight();
+        auto myGrids = GetGridGroup()->GetGrids();
+
+        int x, y;
+
+        if (m_ChildrenCount == 0)
+            return false;
+
+        // 将trans移除
+        if (trans->GetRotate() == Rotation::_0)
         {
-            // 将trans移除
-            for (auto x = 0; x < m_GridGroup->GetWidth(); x++)
+            for (auto _x = transPosX; _x < transPosX + transWidth; _x++)
             {
-                for (auto y = 0; y < m_GridGroup->GetHeight(); y++)
+                for (auto _y = transPosY; _y < transPosY + transHeight; _y++)
                 {
-                    auto grid = m_GridGroup->GetGrid(x, y);
-                    if (grid != NULL)
+                    x = _x - transPosX;
+                    y = _y - transPosY;
+                    auto transGrid = transGrids[x][y];
+                    //if (transGrid != trans->GetGrid(_x, _y))
+                    //    return false;
+                    if (transGrid != NULL)
                     {
-                        auto subGrid = grid->GetSubGrid();
-                        if (subGrid != NULL && subGrid->GetOwner() == trans->GetGridGroup())
+                        x = _x - myPosX;
+                        y = _y - myPosY;
+                        if (x >= 0 && x < myWidth && y >= 0 && y < myHeight)
+                        {
+                            auto grid = myGrids[x][y];
                             grid->SetSubGrid(NULL);
+                        }
                     }
                 }
             }
-
-            m_ChildrenCount--;
-
-            GenDebugString();
-
-            return true;
         }
-        else
-            return false;
+        else if (trans->GetRotate() == Rotation::_90)
+        {
+            for (auto _x = transPosX; _x < transPosX + transHeight; _x++)
+            {
+                for (auto _y = transPosY; _y < transPosY + transWidth; _y++)
+                {
+                    x = _y - transPosY;
+                    y = transHeight - (_x - transPosX) - 1;
+                    auto transGrid = transGrids[x][y];
+                    //if (transGrid != trans->GetGrid(_x, _y))
+                    //    return false;
+                    if (transGrid != NULL)
+                    {
+                        x = _x - myPosX;
+                        y = _y - myPosY;
+                        if (x >= 0 && x < myWidth && y >= 0 && y < myHeight)
+                        {
+                            auto grid = myGrids[x][y];
+                            grid->SetSubGrid(NULL);
+                        }
+                    }
+                }
+            }
+        }
+        else if (trans->GetRotate() == Rotation::_180)
+        {
+            for (auto _x = transPosX; _x < transPosX + transWidth; _x++)
+            {
+                for (auto _y = transPosY; _y < transPosY + transHeight; _y++)
+                {
+                    x = transHeight - (_x - transPosX) - 1;
+                    y = transWidth - (_y - transPosY) - 1;
+                    auto transGrid = transGrids[x][y];
+                    //if (transGrid != trans->GetGrid(_x, _y))
+                    //    return false;
+                    if (transGrid != NULL)
+                    {
+                        x = _x - myPosX;
+                        y = _y - myPosY;
+                        if (x >= 0 && x < myWidth && y >= 0 && y < myHeight)
+                        {
+                            auto grid = myGrids[x][y];
+                            grid->SetSubGrid(NULL);
+                        }
+                    }
+                }
+            }
+        }
+        else if (trans->GetRotate() == Rotation::_270)
+        {
+            for (auto _x = transPosX; _x < transPosX + transHeight; _x++)
+            {
+                for (auto _y = transPosY; _y < transPosY + transWidth; _y++)
+                {
+                    x = transWidth - (_y - transPosY) - 1;
+                    y = _x - transPosX;
+                    auto transGrid = transGrids[x][y];
+                    //if (transGrid != trans->GetGrid(_x, _y))
+                    //    return false;
+                    if (transGrid != NULL)
+                    {
+                        x = _x - myPosX;
+                        y = _y - myPosY;
+                        if (x >= 0 && x < myWidth && y >= 0 && y < myHeight)
+                        {
+                            auto grid = myGrids[x][y];
+                            grid->SetSubGrid(NULL);
+                        }
+                    }
+                }
+            }
+        }
+
+        m_ChildrenCount--;
+
+        GenDebugString();
+
+        return true;
     }
 
     //std::set<GridGroupTransform*>* GetChildren() const
@@ -766,6 +987,7 @@ public:
         m_FixedPosY = fixedPosY;
         m_GridGroup->SetMoveable(m_FixedPosX < 0 || m_FixedPosY < 0);
         m_GridGroup->SetRotatable(m_FixedPosX < 0 || m_FixedPosY < 0);
+        m_GridGroupTransform = new GridGroupTransform(m_GridGroup);
     }
 
     ~Bag()
@@ -773,6 +995,10 @@ public:
         if (m_GridGroup != NULL)
             delete m_GridGroup;
         m_GridGroup = NULL;
+
+        if (m_GridGroupTransform != NULL)
+            delete m_GridGroupTransform;
+        m_GridGroupTransform = NULL;
     }
 
     int GetClassId() const
@@ -783,6 +1009,11 @@ public:
     GridGroup* GetGridGroup() const
     {
         return m_GridGroup;
+    }
+
+    GridGroupTransform* GetGridGroupTransform() const
+    {
+        return m_GridGroupTransform;
     }
 
     int GetFixedPosX() const
@@ -798,6 +1029,7 @@ public:
 private:
     int m_ClassId;
     GridGroup* m_GridGroup = NULL;
+    GridGroupTransform* m_GridGroupTransform = NULL;
     // 左下角固定位置，如果两个都小于0，则可移动，可旋转
     int m_FixedPosX = -1, m_FixedPosY = -1;
 };
@@ -954,7 +1186,7 @@ public:
         }
 
         auto bag = m_MovableBags[bagSort[bagIdx]];
-        auto bagTrans = new GridGroupTransform(bag->GetGridGroup());
+        auto bagTrans = bag->GetGridGroupTransform();
         // 遍历包裹能放入的所有位置，判断是否可以放入
         // 需要遍历的最大数值，是所有包裹的长宽之和
         for (int x = 0; x < maxWidth; x++)
@@ -1004,7 +1236,6 @@ public:
                 }
             }
         }
-        delete bagTrans;
     }
 
     int GetLaytoutCount() const
@@ -1041,17 +1272,17 @@ int main()
         backpackLayout.AddBag(bag);
     }
 
-    //{
-    //    auto bag = new Bag(2);
-    //    bag->GetGridGroup()->SetGrid(0, 0, new Grid());
-    //    bag->GetGridGroup()->SetGrid(0, 1, new Grid());
-    //    bag->GetGridGroup()->SetGrid(1, 0, new Grid());
-    //    bag->GetGridGroup()->SetGrid(1, 1, new Grid());
-    //    bag->GetGridGroup()->SetGrid(2, 1, new Grid());
-    //    bag->GetGridGroup()->SetGrid(1, 2, new Grid());
-    //    bag->GetGridGroup()->SetGrid(2, 2, new Grid());
-    //    backpackLayout.AddBag(bag);
-    //}
+    {
+        auto bag = new Bag(2);
+        bag->GetGridGroup()->SetGrid(0, 0, new Grid());
+        bag->GetGridGroup()->SetGrid(0, 1, new Grid());
+        bag->GetGridGroup()->SetGrid(1, 0, new Grid());
+        bag->GetGridGroup()->SetGrid(1, 1, new Grid());
+        bag->GetGridGroup()->SetGrid(2, 1, new Grid());
+        bag->GetGridGroup()->SetGrid(1, 2, new Grid());
+        bag->GetGridGroup()->SetGrid(2, 2, new Grid());
+        backpackLayout.AddBag(bag);
+    }
 
     {
         auto bag = new Bag(3);
@@ -1095,6 +1326,23 @@ int main()
         bag->GetGridGroup()->SetGrid(3, 2, new Grid());
         backpackLayout.AddBag(bag);
     }
+
+    //{
+    //    auto bag = new Bag(6);
+    //    bag->GetGridGroup()->SetGrid(0, 0, new Grid());
+    //    bag->GetGridGroup()->SetGrid(0, 1, new Grid());
+    //    bag->GetGridGroup()->SetGrid(0, 2, new Grid());
+    //    bag->GetGridGroup()->SetGrid(1, 0, new Grid());
+    //    bag->GetGridGroup()->SetGrid(1, 1, new Grid());
+    //    bag->GetGridGroup()->SetGrid(1, 2, new Grid());
+    //    bag->GetGridGroup()->SetGrid(2, 0, new Grid());
+    //    bag->GetGridGroup()->SetGrid(2, 1, new Grid());
+    //    bag->GetGridGroup()->SetGrid(2, 2, new Grid());
+    //    bag->GetGridGroup()->SetGrid(3, 0, new Grid());
+    //    bag->GetGridGroup()->SetGrid(3, 1, new Grid());
+    //    bag->GetGridGroup()->SetGrid(3, 2, new Grid());
+    //    backpackLayout.AddBag(bag);
+    //}
 
     
 
