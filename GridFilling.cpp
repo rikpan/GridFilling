@@ -5,6 +5,8 @@
 #include <sstream>
 #include <chrono>
 
+// #define DEBUG_STRING
+
 // 顺时针旋转
 enum class Rotation
 {
@@ -89,6 +91,16 @@ public:
         m_Height = 0;
     }
 
+    void SetId(int id)
+    {
+        m_Id = id;
+    }
+
+    int GetId() const
+    {
+        return m_Id;
+    }
+
     int GetWidth() const
     {
         return m_Width;
@@ -170,19 +182,30 @@ public:
     {
         if (r == Rotation::_0)
         {
-            GetRotationPos(x, y, Rotation::_0, rx, ry);
+            *rx = x;
+            *ry = y;
         }
         else if (r == Rotation::_90)
         {
-            GetRotationPos(x, y, Rotation::_270, rx, ry);
+            *rx = y;
+            *ry = m_Height - x - 1;
         }
         else if (r == Rotation::_180)
         {
-            GetRotationPos(x, y, Rotation::_180, rx, ry);
+            *rx = m_Height - x - 1;
+            *ry = m_Width - y - 1;
         }
         else if (r == Rotation::_270)
         {
-            GetRotationPos(x, y, Rotation::_90, rx, ry);
+            *rx = m_Width - y - 1;
+            *ry = x;
+        }
+        else
+        {
+            std::stringstream ss;
+            ss << "非法旋转: " << (int)r;
+            std::string formatted = ss.str();
+            throw new std::exception(formatted.c_str());
         }
     }
 
@@ -262,6 +285,7 @@ public:
     }
 
 private:
+    int m_Id = -1; // id
     int m_Width = 0; // 原始宽
     int m_Height = 0; // 原始高
     Grid*** m_Grids = NULL; // 格子
@@ -378,6 +402,14 @@ public:
         return m_GridGroup->GetGrid(x, y);
     }
 
+    // posX和posY是世界坐标，因此下面要做逆移动和逆旋转
+    Grid* GetGridLocal(int lx, int ly) const
+    {
+        int x, y;
+        m_GridGroup->GetInvRotationPos(lx, ly, m_Rotation, &x, &y);
+        return m_GridGroup->GetGrid(x, y);
+    }
+
     // 判断trans是否与本transform的格子重叠
     bool IsOverlapTransform(GridGroupTransform* trans) const
     {
@@ -385,10 +417,13 @@ public:
         {
             for (auto y = trans->GetPosY(); y < trans->GetPosY() + trans->GetHeight(); y++)
             {
-                auto grid = GetGrid(x, y);
-                if (grid != NULL && grid->GetSubGrid() != NULL)
-                    // 这个位置已经有其他格子了，失败
-                    return true;
+                if (trans->GetGrid(x, y) != NULL)
+                {
+                    auto grid = GetGrid(x, y);
+                    if (grid == NULL || grid->GetSubGrid() != NULL)
+                        // 这个位置已经有其他格子了，失败
+                        return true;
+                }
             }
         }
         return false;
@@ -402,19 +437,35 @@ public:
             for (auto y = trans->GetPosY(); y < trans->GetPosY() + trans->GetHeight(); y++)
             {
                 // 这个位置自己有格子，本transform没有格子，且上下左右有格子，那么就算是相邻
-                auto grid = GetGrid(x, y);
-                auto gridLeft = GetGrid(x - 1, y);
-                auto gridRight = GetGrid(x + 1, y);
-                auto gridTop = GetGrid(x, y + 1);
-                auto gridBottom = GetGrid(x, y - 1);
-                if (trans->GetGrid(x, y) != NULL &&
-                    grid != NULL && grid->GetSubGrid() == NULL &&
-                    (gridLeft != NULL && gridLeft->GetSubGrid() != NULL ||
-                     gridRight != NULL && gridRight->GetSubGrid() != NULL ||
-                     gridTop != NULL && gridTop->GetSubGrid() != NULL ||
-                     gridBottom != NULL && gridBottom->GetSubGrid() != NULL))
+                if (trans->GetGrid(x, y) != NULL)
                 {
-                    return true;
+                    auto grid = GetGrid(x, y);
+                    if (grid != NULL && grid->GetSubGrid() == NULL)
+                    {
+                        auto gridLeft = GetGrid(x - 1, y);
+                        if (gridLeft == NULL || gridLeft->GetSubGrid() == NULL)
+                        {
+                            auto gridRight = GetGrid(x + 1, y);
+                            if (gridRight == NULL || gridRight->GetSubGrid() == NULL)
+                            {
+                                auto gridTop = GetGrid(x, y + 1);
+                                if (gridTop == NULL || gridTop->GetSubGrid() == NULL)
+                                {
+                                    auto gridBottom = GetGrid(x, y - 1);
+                                    if (gridBottom == NULL || gridBottom->GetSubGrid() == NULL)
+                                        return false;
+                                    else
+                                        return true;
+                                }
+                                else
+                                    return true;
+                            }
+                            else
+                                return true;
+                        }
+                        else
+                            return true;
+                    }
                 }
             }
         }
@@ -442,10 +493,13 @@ public:
                 auto transGrid = trans->GetGrid(x, y);
                 if (transGrid != NULL)
                 {
-                    auto grid = m_GridGroup->GetGrid(x, y);
+                    auto grid = GetGrid(x, y);
                     // 这个位置不能放格子，或者已经被占据了，失败
                     if (grid == NULL || grid->GetSubGrid() != NULL)
+                    {
+                        TryRemoveTransform(trans);
                         return false;
+                    }
                     grid->SetSubGrid(transGrid);
                 }
             }
@@ -499,7 +553,10 @@ public:
 
     void RebuildDebugString()
     {
+#ifdef DEBUG_STRING
         int size = GetHeight() * (GetWidth() * 3 + 1);
+        if (m_DebugString != NULL)
+            delete[] m_DebugString;
         m_DebugString = new char16_t[size + 1];
         m_DebugString[size] = '\0';
 
@@ -514,24 +571,31 @@ public:
             }
             m_DebugString[pos++] = u'\n';
         }
+#endif
     }
 
     void GenDebugString()
     {
-#if true
+#ifdef DEBUG_STRING
         int pos = 0;
         for (auto y = GetHeight() - 1; y >= 0; y--)
         {
             for (auto x = 0; x < GetWidth(); x++)
             {
                 pos++;
-                auto grid = GetGrid(m_PosX + x, m_PosY + y);
+                auto grid = GetGridLocal(x, y);
                 if (grid == NULL)
                     m_DebugString[pos++] = u'·';
                 else if (grid->GetSubGrid() == NULL)
                     m_DebugString[pos++] = u'×';
                 else
-                    m_DebugString[pos++] = u'○';
+                {
+                    auto owner = grid->GetSubGrid()->GetOwner();
+                    if (owner != NULL && owner->GetId() >= 0)
+                        m_DebugString[pos++] = u'0' + owner->GetId();
+                    else
+                        m_DebugString[pos++] = u'○';
+                }
                 pos++;
             }
             pos++;
@@ -554,6 +618,7 @@ public:
     {
         m_ClassId = classId;
         m_GridGroup = new GridGroup();
+        m_GridGroup->SetId(m_ClassId);
     }
 
     ~Item()
@@ -585,6 +650,7 @@ public:
     {
         m_ClassId = classId;
         m_GridGroup = new GridGroup();
+        m_GridGroup->SetId(m_ClassId);
         m_FixedPosX = fixedPosX;
         m_FixedPosY = fixedPosY;
         m_GridGroup->SetMoveable(m_FixedPosX < 0 || m_FixedPosY < 0);
@@ -827,6 +893,7 @@ public:
                 }
             }
         }
+        delete bagTrans;
     }
 
     int GetLaytoutCount() const
@@ -874,13 +941,17 @@ int main()
         backpackLayout.AddBag(bag);
     }
 
-    {
-        auto bag = new Bag(2);
-        bag->GetGridGroup()->SetGrid(0, 0, new Grid());
-        bag->GetGridGroup()->SetGrid(0, 1, new Grid());
-        bag->GetGridGroup()->SetGrid(1, 0, new Grid());
-        backpackLayout.AddBag(bag);
-    }
+    //{
+    //    auto bag = new Bag(2);
+    //    bag->GetGridGroup()->SetGrid(0, 0, new Grid());
+    //    bag->GetGridGroup()->SetGrid(0, 1, new Grid());
+    //    bag->GetGridGroup()->SetGrid(1, 0, new Grid());
+    //    bag->GetGridGroup()->SetGrid(1, 1, new Grid());
+    //    bag->GetGridGroup()->SetGrid(2, 1, new Grid());
+    //    bag->GetGridGroup()->SetGrid(1, 2, new Grid());
+    //    bag->GetGridGroup()->SetGrid(2, 2, new Grid());
+    //    backpackLayout.AddBag(bag);
+    //}
 
     {
         auto bag = new Bag(3);
@@ -894,19 +965,19 @@ int main()
         backpackLayout.AddBag(bag);
     }
 
-    //{
-    //    auto bag = new Bag(4);
-    //    bag->GetGridGroup()->SetGrid(0, 0, new Grid());
-    //    bag->GetGridGroup()->SetGrid(0, 1, new Grid());
-    //    bag->GetGridGroup()->SetGrid(0, 2, new Grid());
-    //    bag->GetGridGroup()->SetGrid(1, 0, new Grid());
-    //    bag->GetGridGroup()->SetGrid(1, 1, new Grid());
-    //    bag->GetGridGroup()->SetGrid(1, 2, new Grid());
-    //    bag->GetGridGroup()->SetGrid(2, 0, new Grid());
-    //    bag->GetGridGroup()->SetGrid(2, 1, new Grid());
-    //    bag->GetGridGroup()->SetGrid(2, 2, new Grid());
-    //    backpackLayout.AddBag(bag);
-    //}
+    {
+        auto bag = new Bag(4);
+        bag->GetGridGroup()->SetGrid(0, 0, new Grid());
+        bag->GetGridGroup()->SetGrid(0, 1, new Grid());
+        bag->GetGridGroup()->SetGrid(0, 2, new Grid());
+        bag->GetGridGroup()->SetGrid(1, 0, new Grid());
+        bag->GetGridGroup()->SetGrid(1, 1, new Grid());
+        bag->GetGridGroup()->SetGrid(1, 2, new Grid());
+        bag->GetGridGroup()->SetGrid(2, 0, new Grid());
+        bag->GetGridGroup()->SetGrid(2, 1, new Grid());
+        bag->GetGridGroup()->SetGrid(2, 2, new Grid());
+        backpackLayout.AddBag(bag);
+    }
 
     {
         auto bag = new Bag(5);
