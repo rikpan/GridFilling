@@ -369,15 +369,6 @@ public:
         return m_GridGroup;
     }
 
-    GridGroupTransform* Clone()
-    {
-        auto clone = new GridGroupTransform(m_GridGroup);
-        clone->m_PosX = m_PosX;
-        clone->m_PosY = m_PosY;
-        clone->m_Rotation = m_Rotation;
-        return clone;
-    }
-
     int GetWidth() const
     {
         if (m_Rotation == Rotation::_0 || m_Rotation == Rotation::_180)
@@ -413,16 +404,136 @@ public:
     // 判断trans是否与本transform的格子重叠
     bool IsOverlapTransform(GridGroupTransform* trans) const
     {
-        for (auto x = trans->GetPosX(); x < trans->GetPosX() + trans->GetWidth(); x++)
+        int transPosX = trans->GetPosX();
+        int transPosY = trans->GetPosY();
+        int transWidth = trans->GetGridGroup()->GetWidth();
+        int transHeight = trans->GetGridGroup()->GetHeight();
+        auto transGrids = trans->GetGridGroup()->GetGrids();
+
+        int myPosX = GetPosX();
+        int myPosY = GetPosY();
+        int myWidth = GetWidth();
+        int myHeight = GetHeight();
+        auto myGrids = GetGridGroup()->GetGrids();
+        int x, y;
+
+        if (trans->GetRotate() == Rotation::_0)
         {
-            for (auto y = trans->GetPosY(); y < trans->GetPosY() + trans->GetHeight(); y++)
+            for (auto _x = transPosX; _x < transPosX + transWidth; _x++)
             {
-                if (trans->GetGrid(x, y) != NULL)
+                for (auto _y = transPosY; _y < transPosY + transHeight; _y++)
                 {
-                    auto grid = GetGrid(x, y);
-                    if (grid == NULL || grid->GetSubGrid() != NULL)
-                        // 这个位置已经有其他格子了，失败
-                        return true;
+                    x = _x - transPosX;
+                    y = _y - transPosY;
+                    auto transGrid = transGrids[x][y];
+                    //if (transGrid != trans->GetGrid(_x, _y))
+                    //    return false;
+                    if (transGrid != NULL)
+                    {
+                        x = _x - myPosX;
+                        y = _y - myPosY;
+                        if (x >= 0 && x < myWidth && y >= 0 && y < myHeight)
+                        {
+                            auto grid = myGrids[x][y];
+                            //if (grid != GetGrid(_x, _y))
+                            //    return false;
+                            if (grid->GetSubGrid() != NULL)
+                                // 这个位置已经有其他格子了，失败
+                                return true;
+                        }
+                        else
+                            return true;
+                    }
+                }
+            }
+        }
+        else if (trans->GetRotate() == Rotation::_90)
+        {
+            for (auto _x = transPosX; _x < transPosX + transHeight; _x++)
+            {
+                for (auto _y = transPosY; _y < transPosY + transWidth; _y++)
+                {
+                    x = _y - transPosY;
+                    y = transHeight - (_x - transPosX) - 1;
+                    auto transGrid = transGrids[x][y];
+                    //if (transGrid != trans->GetGrid(_x, _y))
+                    //    return false;
+                    if (transGrid != NULL)
+                    {
+                        x = _x - myPosX;
+                        y = _y - myPosY;
+                        if (x >= 0 && x < myWidth && y >= 0 && y < myHeight)
+                        {
+                            auto grid = myGrids[x][y];
+                            //if (grid != GetGrid(_x, _y))
+                            //    return false;
+                            if (grid->GetSubGrid() != NULL)
+                                // 这个位置已经有其他格子了，失败
+                                return true;
+                        }
+                        else
+                            return true;
+                    }
+                }
+            }
+        }
+        else if (trans->GetRotate() == Rotation::_180)
+        {
+            for (auto _x = transPosX; _x < transPosX + transWidth; _x++)
+            {
+                for (auto _y = transPosY; _y < transPosY + transHeight; _y++)
+                {
+                    x = transHeight - (_x - transPosX) - 1;
+                    y = transWidth - (_y - transPosY) - 1;
+                    auto transGrid = transGrids[x][y];
+                    //if (transGrid != trans->GetGrid(_x, _y))
+                    //    return false;
+                    if (transGrid != NULL)
+                    {
+                        x = _x - myPosX;
+                        y = _y - myPosY;
+                        if (x >= 0 && x < myWidth && y >= 0 && y < myHeight)
+                        {
+                            auto grid = myGrids[x][y];
+                            //if (grid != GetGrid(_x, _y))
+                            //    return false;
+                            if (grid->GetSubGrid() != NULL)
+                                // 这个位置已经有其他格子了，失败
+                                return true;
+                        }
+                        else
+                            return true;
+                    }
+                }
+            }
+        }
+        else if (trans->GetRotate() == Rotation::_270)
+        {
+            for (auto _x = transPosX; _x < transPosX + transHeight; _x++)
+            {
+                for (auto _y = transPosY; _y < transPosY + transWidth; _y++)
+                {
+                    x = transWidth - (_y - transPosY) - 1;
+                    y = _x - transPosX;
+                    auto transGrid = transGrids[x][y];
+                    //if (transGrid != trans->GetGrid(_x, _y))
+                    //    return false;
+                    if (transGrid != NULL)
+                    {
+                        x = _x - myPosX;
+                        y = _y - myPosY;
+                        if (x >= 0 && x < myWidth && y >= 0 && y < myHeight)
+                        {
+                            auto grid = myGrids[x][y];
+                            //if (grid != GetGrid(_x, _y))
+                            //    return false;
+                            if (grid->GetSubGrid() != NULL)
+                                // 这个位置已经有其他格子了，失败
+                                return true;
+                        }
+                        else
+                            return true;
+                    }
                 }
             }
         }
@@ -916,17 +1027,6 @@ private:
 
 int main()
 {
-    // 获取当前时间点
-    auto now = std::chrono::system_clock::now();
-
-    // 转换为毫秒
-    auto now_ms = std::chrono::time_point_cast<std::chrono::milliseconds>(now);
-    auto start_ms = now_ms.time_since_epoch().count();
-
-    // 转换为微秒
-    auto now_us = std::chrono::time_point_cast<std::chrono::microseconds>(now);
-    auto start_us = now_us.time_since_epoch().count();
-
     BackpackLayout backpackLayout;
 
     auto backpack = new Backpack(10, 10);
@@ -1000,8 +1100,20 @@ int main()
 
 
 
+    // 获取当前时间点
+    auto now = std::chrono::system_clock::now();
+
+    // 转换为毫秒
+    auto now_ms = std::chrono::time_point_cast<std::chrono::milliseconds>(now);
+    auto start_ms = now_ms.time_since_epoch().count();
+
+    // 转换为微秒
+    auto now_us = std::chrono::time_point_cast<std::chrono::microseconds>(now);
+    auto start_us = now_us.time_since_epoch().count();
+
     backpackLayout.Layout();
 
+    // 获取当前时间点
     now = std::chrono::system_clock::now();
 
     // 转换为毫秒
