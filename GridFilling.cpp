@@ -5,7 +5,7 @@
 #include <sstream>
 #include <chrono>
 
-// #define DEBUG_STRING
+#define DEBUG_STRING 1
 
 // 顺时针旋转
 enum class Rotation
@@ -31,6 +31,16 @@ public:
         //    throw new std::exception("子格子不为空");
     }
 
+    void SetOwner(GridGroup* owner)
+    {
+        m_Owner = owner;
+    }
+
+    GridGroup* GetOwner() const
+    {
+        return m_Owner;
+    }
+
     void SetSubGrid(Grid* grid)
     {
         m_SubGrid = grid;
@@ -42,8 +52,8 @@ public:
     }
 
 private:
+    GridGroup* m_Owner = NULL; // 拥有着
     Grid* m_SubGrid = NULL; // 所属放置的格子
-    GridGroup* m_Owner = NULL; // 所属格子组
 };
 
 // 迫于代码简单易懂的考量，不统一使用Grid，改为将GridGroup模板化
@@ -101,6 +111,17 @@ public:
         return m_Height;
     }
 
+    bool AddGrid(int x, int y, Grid* grid)
+    {
+        if (SetGrid(x, y, grid))
+        {
+            grid->SetOwner(this);
+            return true;
+        }
+        else
+            return false;
+    }
+
     bool SetGrid(int x, int y, Grid* grid)
     {
         if (grid != NULL)
@@ -114,6 +135,7 @@ public:
             {
                 m_Grids[x][y] = grid;
                 m_RecheckRotationValid = true;
+                m_VaildGridCount++;
                 return true;
 
             }
@@ -122,10 +144,11 @@ public:
         }
         else
         {
-            if (x < m_Width && y < m_Height)
+            if (x < m_Width && y < m_Height && m_Grids[x][y] != NULL)
             {
                 m_Grids[x][y] = NULL;
                 m_RecheckRotationValid = true;
+                m_VaildGridCount--;
                 return true;
 
             }
@@ -273,6 +296,11 @@ public:
         return m_RotationValid;
     }
 
+    int GetVaildGridCount() const
+    {
+        return m_VaildGridCount;
+    }
+
 private:
     int m_Id = -1; // id
     int m_Width = 0; // 原始宽
@@ -281,7 +309,8 @@ private:
     bool m_Moveable = true; // 是否可移动
     bool m_Rotatable = true; // 是否可旋转
     bool m_RecheckRotationValid = false; // 是否需要重新检查旋转有效性
-    bool m_RotationValid[4] = {true, true, true, true}; // 0, 90, 180, 270旋转是否有意义; 0一定为true
+    bool m_RotationValid[4] = { true, false, false, false }; // 0, 90, 180, 270旋转是否有意义; 0一定为true
+    int m_VaildGridCount = 0; // 有效格子数量
 
     // width和height只能扩大，不能缩小
     void SetSize(int newWidth, int newHeight)
@@ -314,8 +343,7 @@ public:
     GridGroupTransform(GridGroup* gridGroup)
     {
         m_GridGroup = gridGroup;
-        RebuildDebugString();
-        GenDebugString();
+        SetRotate(Rotation::_0);
     }
 
     ~GridGroupTransform()
@@ -427,7 +455,7 @@ public:
                             auto grid = myGrids[x][y];
                             //if (grid != GetGrid(_x, _y))
                             //    return false;
-                            if (grid->GetSubGrid() != NULL)
+                            if (grid == NULL || grid->GetSubGrid() != NULL)
                                 // 这个位置已经有其他格子了，失败
                                 return true;
                         }
@@ -457,7 +485,7 @@ public:
                             auto grid = myGrids[x][y];
                             //if (grid != GetGrid(_x, _y))
                             //    return false;
-                            if (grid->GetSubGrid() != NULL)
+                            if (grid == NULL || grid->GetSubGrid() != NULL)
                                 // 这个位置已经有其他格子了，失败
                                 return true;
                         }
@@ -487,7 +515,7 @@ public:
                             auto grid = myGrids[x][y];
                             //if (grid != GetGrid(_x, _y))
                             //    return false;
-                            if (grid->GetSubGrid() != NULL)
+                            if (grid == NULL || grid->GetSubGrid() != NULL)
                                 // 这个位置已经有其他格子了，失败
                                 return true;
                         }
@@ -517,7 +545,7 @@ public:
                             auto grid = myGrids[x][y];
                             //if (grid != GetGrid(_x, _y))
                             //    return false;
-                            if (grid->GetSubGrid() != NULL)
+                            if (grid == NULL || grid->GetSubGrid() != NULL)
                                 // 这个位置已经有其他格子了，失败
                                 return true;
                         }
@@ -620,12 +648,13 @@ public:
                         {
                             auto grid = myGrids[x][y];
                             // 这个位置不能放格子，或者已经被占据了，失败
-                            if (grid->GetSubGrid() != NULL)
+                            if (grid == NULL || grid->GetSubGrid() != NULL)
                             {
                                 TryRemoveTransform(trans);
                                 return false;
                             }
                             grid->SetSubGrid(transGrid);
+                            m_RemainVaildGridCount--;
                         }
                         else
                         {
@@ -655,12 +684,13 @@ public:
                         {
                             auto grid = myGrids[x][y];
                             // 这个位置不能放格子，或者已经被占据了，失败
-                            if (grid->GetSubGrid() != NULL)
+                            if (grid == NULL || grid->GetSubGrid() != NULL)
                             {
                                 TryRemoveTransform(trans);
                                 return false;
                             }
                             grid->SetSubGrid(transGrid);
+                            m_RemainVaildGridCount--;
                         }
                         else
                         {
@@ -690,12 +720,13 @@ public:
                         {
                             auto grid = myGrids[x][y];
                             // 这个位置不能放格子，或者已经被占据了，失败
-                            if (grid->GetSubGrid() != NULL)
+                            if (grid == NULL || grid->GetSubGrid() != NULL)
                             {
                                 TryRemoveTransform(trans);
                                 return false;
                             }
                             grid->SetSubGrid(transGrid);
+                            m_RemainVaildGridCount--;
                         }
                         else
                         {
@@ -725,12 +756,13 @@ public:
                         {
                             auto grid = myGrids[x][y];
                             // 这个位置不能放格子，或者已经被占据了，失败
-                            if (grid->GetSubGrid() != NULL)
+                            if (grid == NULL || grid->GetSubGrid() != NULL)
                             {
                                 TryRemoveTransform(trans);
                                 return false;
                             }
                             grid->SetSubGrid(transGrid);
+                            m_RemainVaildGridCount--;
                         }
                         else
                         {
@@ -787,7 +819,11 @@ public:
                         if (x >= 0 && x < myWidth && y >= 0 && y < myHeight)
                         {
                             auto grid = myGrids[x][y];
-                            grid->SetSubGrid(NULL);
+                            if (grid != NULL)
+                            {
+                                grid->SetSubGrid(NULL);
+                                m_RemainVaildGridCount++;
+                            }
                         }
                     }
                 }
@@ -811,7 +847,11 @@ public:
                         if (x >= 0 && x < myWidth && y >= 0 && y < myHeight)
                         {
                             auto grid = myGrids[x][y];
-                            grid->SetSubGrid(NULL);
+                            if (grid != NULL)
+                            {
+                                grid->SetSubGrid(NULL);
+                                m_RemainVaildGridCount++;
+                            }
                         }
                     }
                 }
@@ -835,7 +875,11 @@ public:
                         if (x >= 0 && x < myWidth && y >= 0 && y < myHeight)
                         {
                             auto grid = myGrids[x][y];
-                            grid->SetSubGrid(NULL);
+                            if (grid != NULL)
+                            {
+                                grid->SetSubGrid(NULL);
+                                m_RemainVaildGridCount++;
+                            }
                         }
                     }
                 }
@@ -859,7 +903,11 @@ public:
                         if (x >= 0 && x < myWidth && y >= 0 && y < myHeight)
                         {
                             auto grid = myGrids[x][y];
-                            grid->SetSubGrid(NULL);
+                            if (grid != NULL)
+                            {
+                                grid->SetSubGrid(NULL);
+                                m_RemainVaildGridCount++;
+                            }
                         }
                     }
                 }
@@ -883,9 +931,19 @@ public:
         return m_ChildrenCount;
     }
 
+    void ResetReaminVaildGridCount()
+    {
+        m_RemainVaildGridCount = m_GridGroup->GetVaildGridCount();
+    }
+
+    int GetReaminVaildGridCount() const
+    {
+        return m_RemainVaildGridCount;
+    }
+
     void RebuildDebugString()
     {
-#ifdef DEBUG_STRING
+#if _DEBUG && DEBUG_STRING
         int size = GetHeight() * (GetWidth() * 3 + 1);
         if (m_DebugString != NULL)
             delete[] m_DebugString;
@@ -908,7 +966,7 @@ public:
 
     void GenDebugString()
     {
-#ifdef DEBUG_STRING
+#if _DEBUG && DEBUG_STRING
         int pos = 0;
         for (auto y = GetHeight() - 1; y >= 0; y--)
         {
@@ -940,6 +998,7 @@ private:
     int m_PosX = 0, m_PosY = 0; // 局部位置，左下角
     Rotation m_Rotation = Rotation::_0; // 旋转
     int m_ChildrenCount = 0;
+    int m_RemainVaildGridCount = 0; // 剩余有效格子数量
     char16_t* m_DebugString; // 调试用字符串
 };
 
@@ -951,6 +1010,7 @@ public:
         m_ClassId = classId;
         m_GridGroup = new GridGroup();
         m_GridGroup->SetId(m_ClassId);
+        m_GridGroupTransform = new GridGroupTransform(m_GridGroup);
     }
 
     ~Item()
@@ -958,6 +1018,10 @@ public:
         if (m_GridGroup != NULL)
             delete m_GridGroup;
         m_GridGroup = NULL;
+
+        if (m_GridGroupTransform != NULL)
+            delete m_GridGroupTransform;
+        m_GridGroupTransform = NULL;
     }
 
     int GetClassId() const
@@ -970,9 +1034,15 @@ public:
         return m_GridGroup;
     }
 
+    GridGroupTransform* GetGridGroupTransform() const
+    {
+        return m_GridGroupTransform;
+    }
+
 private:
     int m_ClassId;
     GridGroup* m_GridGroup = NULL;
+    GridGroupTransform* m_GridGroupTransform = NULL;
 };
 
 class Bag
@@ -1093,6 +1163,14 @@ public:
         if (m_BackpackTrans != NULL)
             delete m_BackpackTrans;
         m_BackpackTrans = NULL;
+
+        if (m_BackpackLayoutItemTrans != NULL)
+            delete m_BackpackLayoutItemTrans;
+        m_BackpackLayoutItemTrans = NULL;
+
+        if (m_BackpackLayoutItemTransGridGroup != NULL)
+            delete m_BackpackLayoutItemTransGridGroup;
+        m_BackpackLayoutItemTransGridGroup = NULL;
     }
 
     void SetBackpack(Backpack* backpack)
@@ -1130,6 +1208,15 @@ public:
             delete m_BackpackTrans;
         m_BackpackTrans = new GridGroupTransform(m_Backpack->GetGridGroup());
 
+        if (m_BackpackLayoutItemTrans != NULL)
+            delete m_BackpackLayoutItemTrans;
+        if (m_BackpackLayoutItemTransGridGroup != NULL)
+            delete m_BackpackLayoutItemTransGridGroup;
+        m_BackpackLayoutItemTransGridGroup = new GridGroup(m_Backpack->GetGridGroup()->GetWidth(), m_Backpack->GetGridGroup()->GetHeight());
+        m_BackpackLayoutItemTrans = new GridGroupTransform(m_BackpackLayoutItemTransGridGroup);
+
+
+
         // 优先放置不能移动的包裹
         for (auto bag : m_FixedBags)
         {
@@ -1144,13 +1231,49 @@ public:
             }
         }
 
+
+
+        // 对包裹大小由大到小排序
+        std::sort(m_MovableBags.begin(), m_MovableBags.end(), [](Bag* a, Bag* b) 
+        {
+            auto _a = a->GetGridGroup();
+            auto _b = b->GetGridGroup();
+            return _a->GetWidth() * _a->GetHeight() > _b->GetWidth() * _b->GetHeight();
+        });
+
         // 递归包裹放置顺序
         std::vector<int> nums;
         for (int i = 0; i < (int)m_MovableBags.size(); ++i) 
         {
             nums.push_back(i);
         }
-        LayoutBagSort(nums, 0, mBagSorts);
+        mBagSorts.push_back(nums);
+        // Permutations(nums, 0, mBagSorts);
+
+        std::cout << "Bag Sorts:" << mBagSorts.size() << std::endl;
+
+
+
+        // 对物品大小由大到小排序
+        std::sort(m_Items.begin(), m_Items.end(), [](Item* a, Item* b)
+        {
+            auto _a = a->GetGridGroup();
+            auto _b = b->GetGridGroup();
+            return _a->GetWidth() * _a->GetHeight() > _b->GetWidth() * _b->GetHeight();
+        });
+
+        // 递归包裹放置顺序
+        nums.clear();
+        for (int i = 0; i < (int)m_Items.size(); ++i)
+        {
+            nums.push_back(i);
+        }
+        //mItemSorts.push_back(nums);
+        Permutations(nums, 0, mItemSorts);
+
+        std::cout << "Item Sorts:" << mItemSorts.size() << std::endl;
+
+
 
         // 开始递归放置可以移动的包裹
         for (int i = 0; i < (int)mBagSorts.size(); i++)
@@ -1160,7 +1283,8 @@ public:
         }
     }
 
-    void LayoutBagSort(std::vector<int>& nums, int start, std::vector<std::vector<int>>& result)
+    // 对nums做全排列
+    void Permutations(std::vector<int>& nums, int start, std::vector<std::vector<int>>& result)
     {
         if (start == (int)nums.size())
         {
@@ -1171,18 +1295,42 @@ public:
         for (int i = start; i < (int)nums.size(); ++i)
         {
             std::swap(nums[start], nums[i]); // 交换当前元素与起始元素
-            LayoutBagSort(nums, start + 1, result); // 递归处理下一个位置
+            Permutations(nums, start + 1, result); // 递归处理下一个位置
             std::swap(nums[start], nums[i]); // 恢复交换（回溯）
         }
     }
 
-    void LayoutBag(std::vector<int>& bagSort, int& maxWidth, int& maxHeight, int bagIdx)
+    // 返回是否继续
+    bool LayoutBag(std::vector<int>& bagSort, int& maxWidth, int& maxHeight, int bagIdx)
     {
         if (bagIdx >= (int)bagSort.size())
         {
             // 所有包裹都放好了
-            m_LaytoutCount++;
-            return;
+            m_LaytoutBagCount++;
+            
+            // 将格子布局放入新的位置
+            auto gridGroup = m_Backpack->GetGridGroup();
+            for (int x = 0; x < gridGroup->GetWidth(); x++)
+            {
+                for (int y = 0; y < gridGroup->GetHeight(); y++)
+                {
+                    auto grid = gridGroup->GetGrid(x, y);
+                    if (grid != NULL && grid->GetSubGrid() != NULL)
+                        m_BackpackLayoutItemTransGridGroup->SetGrid(x, y, grid->GetSubGrid());
+                }
+            }
+            m_BackpackLayoutItemTrans->SetPos(m_BackpackTrans->GetPosX(), m_BackpackTrans->GetPosY());
+            m_BackpackLayoutItemTrans->SetRotate(m_BackpackTrans->GetRotate());
+            m_BackpackLayoutItemTrans->ResetReaminVaildGridCount();
+
+            // 开始递归放置物品
+            for (int i = 0; i < (int)mItemSorts.size(); i++)
+            {
+                int maxWidth = 1, maxHeight = 1; // 第一个物品，固定在0,0位置，也不允许移动
+                LayoutItem(mItemSorts[i], maxWidth, maxHeight, 0);
+            }
+
+            return false;
         }
 
         auto bag = m_MovableBags[bagSort[bagIdx]];
@@ -1220,7 +1368,7 @@ public:
                             maxHeight += bagTrans->GetHeight();
 
                             // 继续放置下一个包裹
-                            LayoutBag(bagSort, maxWidth, maxHeight, bagIdx + 1);
+                            auto ret = LayoutBag(bagSort, maxWidth, maxHeight, bagIdx + 1);
 
                             maxWidth -= bagTrans->GetWidth();
                             maxHeight -= bagTrans->GetHeight();
@@ -1231,16 +1379,101 @@ public:
                                 delete bagTrans;
                                 throw std::exception("可移动包裹移除失败!");
                             }
+
+                            if (!ret)
+                                return false;
                         }
                     }
                 }
             }
         }
+
+        return false;
     }
 
-    int GetLaytoutCount() const
+    int GetLaytoutBagCount() const
     {
-        return m_LaytoutCount;
+        return m_LaytoutBagCount;
+    }
+
+    bool LayoutItem(std::vector<int>& itemSort, int& maxWidth, int& maxHeight, int itemIdx)
+    {
+        if (m_BackpackLayoutItemTrans->GetReaminVaildGridCount() == 0)
+        {
+            m_LaytoutItemCount++;
+            return false;
+        }
+        else if (itemIdx >= (int)itemSort.size())
+        {
+            return false;
+        }
+
+        auto item = m_Items[itemSort[itemIdx]];
+        auto itemTrans = item->GetGridGroupTransform();
+        if (item->GetGridGroup()->GetVaildGridCount() > m_BackpackLayoutItemTrans->GetReaminVaildGridCount())
+        {
+            return true;
+        }
+
+        // 遍历物品能放入的所有位置，判断是否可以放入
+        // 需要遍历的最大数值，是所有物品的长宽之和
+        for (int x = 0; x < maxWidth; x++)
+        {
+            for (int y = 0; y < maxHeight; y++)
+            {
+                // 设置位置
+                itemTrans->SetPos(x, y);
+
+                // 遍历所有旋转情况
+                for (int r = 0; r < 4; r++)
+                {
+                    if (itemTrans->GetGridGroup()->GetRotationValid()[r])
+                    {
+                        // 设置旋转
+                        itemTrans->SetRotate((Rotation)r);
+
+                        // 必须不与本Transform重叠，且必须与本Transform相邻
+                        if (m_BackpackLayoutItemTrans->GetChildrenCount() == 0 ||
+                            !m_BackpackLayoutItemTrans->IsOverlapTransform(itemTrans) &&
+                            m_BackpackLayoutItemTrans->IsTouchTransform(itemTrans))
+                        {
+                            // 尝试添加，在有上面两个判断下，这里不可能失败
+                            if (!m_BackpackLayoutItemTrans->TryAddTransform(itemTrans))
+                            {
+                                delete itemTrans;
+                                throw std::exception("物品放置失败!");
+                            }
+
+                            maxWidth += itemTrans->GetWidth();
+                            maxHeight += itemTrans->GetHeight();
+
+                            // 继续放置下一个物品
+                            auto ret = LayoutItem(itemSort, maxWidth, maxHeight, itemIdx + 1);
+
+                            maxWidth -= itemTrans->GetWidth();
+                            maxHeight -= itemTrans->GetHeight();
+
+                            // 移除再继续
+                            if (!m_BackpackLayoutItemTrans->TryRemoveTransform(itemTrans))
+                            {
+                                delete itemTrans;
+                                throw std::exception("物品移除失败!");
+                            }
+
+                            if (!ret)
+                                return false;
+                        }
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    int GetLaytoutItemCount() const
+    {
+        return m_LaytoutItemCount;
     }
 
 private:
@@ -1251,9 +1484,14 @@ private:
     std::vector<Item*> m_Items;
 
     GridGroupTransform* m_BackpackTrans = NULL;
-    int m_LaytoutCount = 0;
+    int m_LaytoutBagCount = 0;
+
+    GridGroupTransform* m_BackpackLayoutItemTrans = NULL;
+    GridGroup* m_BackpackLayoutItemTransGridGroup = NULL;
+    int m_LaytoutItemCount = 0;
 
     std::vector<std::vector<int>> mBagSorts;
+    std::vector<std::vector<int>> mItemSorts;
 };
 
 int main()
@@ -1262,89 +1500,125 @@ int main()
 
     auto backpack = new Backpack(10, 10);
     backpackLayout.SetBackpack(backpack);
+    int bagId = 1;
 
     {
-        auto bag = new Bag(1);
-        bag->GetGridGroup()->SetGrid(0, 0, new Grid());
-        bag->GetGridGroup()->SetGrid(0, 1, new Grid());
-        bag->GetGridGroup()->SetGrid(1, 0, new Grid());
-        bag->GetGridGroup()->SetGrid(1, 1, new Grid());
+        auto bag = new Bag(bagId++);
+        bag->GetGridGroup()->AddGrid(0, 0, new Grid());
+        bag->GetGridGroup()->AddGrid(0, 1, new Grid());
+        bag->GetGridGroup()->AddGrid(1, 0, new Grid());
+        bag->GetGridGroup()->AddGrid(1, 1, new Grid());
         backpackLayout.AddBag(bag);
     }
 
     {
-        auto bag = new Bag(2);
-        bag->GetGridGroup()->SetGrid(0, 0, new Grid());
-        bag->GetGridGroup()->SetGrid(0, 1, new Grid());
-        bag->GetGridGroup()->SetGrid(1, 0, new Grid());
-        bag->GetGridGroup()->SetGrid(1, 1, new Grid());
-        bag->GetGridGroup()->SetGrid(2, 1, new Grid());
-        bag->GetGridGroup()->SetGrid(1, 2, new Grid());
-        bag->GetGridGroup()->SetGrid(2, 2, new Grid());
+        auto bag = new Bag(bagId++);
+        bag->GetGridGroup()->AddGrid(0, 0, new Grid());
+        bag->GetGridGroup()->AddGrid(0, 1, new Grid());
+        bag->GetGridGroup()->AddGrid(1, 0, new Grid());
+        bag->GetGridGroup()->AddGrid(1, 1, new Grid());
+        bag->GetGridGroup()->AddGrid(2, 1, new Grid());
+        bag->GetGridGroup()->AddGrid(1, 2, new Grid());
+        bag->GetGridGroup()->AddGrid(2, 2, new Grid());
         backpackLayout.AddBag(bag);
     }
 
     {
-        auto bag = new Bag(3);
-        bag->GetGridGroup()->SetGrid(0, 0, new Grid());
-        bag->GetGridGroup()->SetGrid(0, 1, new Grid());
-        bag->GetGridGroup()->SetGrid(1, 0, new Grid());
-        bag->GetGridGroup()->SetGrid(1, 1, new Grid());
-        bag->GetGridGroup()->SetGrid(2, 1, new Grid());
-        bag->GetGridGroup()->SetGrid(1, 2, new Grid());
-        bag->GetGridGroup()->SetGrid(2, 2, new Grid());
+        auto bag = new Bag(bagId++);
+        bag->GetGridGroup()->AddGrid(0, 0, new Grid());
+        bag->GetGridGroup()->AddGrid(0, 1, new Grid());
+        bag->GetGridGroup()->AddGrid(1, 0, new Grid());
+        bag->GetGridGroup()->AddGrid(1, 1, new Grid());
+        bag->GetGridGroup()->AddGrid(2, 1, new Grid());
+        bag->GetGridGroup()->AddGrid(1, 2, new Grid());
+        bag->GetGridGroup()->AddGrid(2, 2, new Grid());
         backpackLayout.AddBag(bag);
     }
 
     {
-        auto bag = new Bag(4);
-        bag->GetGridGroup()->SetGrid(0, 0, new Grid());
-        bag->GetGridGroup()->SetGrid(0, 1, new Grid());
-        bag->GetGridGroup()->SetGrid(0, 2, new Grid());
-        bag->GetGridGroup()->SetGrid(1, 0, new Grid());
-        bag->GetGridGroup()->SetGrid(1, 1, new Grid());
-        bag->GetGridGroup()->SetGrid(1, 2, new Grid());
-        bag->GetGridGroup()->SetGrid(2, 0, new Grid());
-        bag->GetGridGroup()->SetGrid(2, 1, new Grid());
-        bag->GetGridGroup()->SetGrid(2, 2, new Grid());
+        auto bag = new Bag(bagId++);
+        bag->GetGridGroup()->AddGrid(0, 0, new Grid());
+        bag->GetGridGroup()->AddGrid(0, 1, new Grid());
+        bag->GetGridGroup()->AddGrid(0, 2, new Grid());
+        bag->GetGridGroup()->AddGrid(1, 0, new Grid());
+        bag->GetGridGroup()->AddGrid(1, 1, new Grid());
+        bag->GetGridGroup()->AddGrid(1, 2, new Grid());
+        bag->GetGridGroup()->AddGrid(2, 0, new Grid());
+        bag->GetGridGroup()->AddGrid(2, 1, new Grid());
+        bag->GetGridGroup()->AddGrid(2, 2, new Grid());
         backpackLayout.AddBag(bag);
     }
 
     {
-        auto bag = new Bag(5);
-        bag->GetGridGroup()->SetGrid(0, 0, new Grid());
-        bag->GetGridGroup()->SetGrid(0, 1, new Grid());
-        bag->GetGridGroup()->SetGrid(0, 2, new Grid());
-        bag->GetGridGroup()->SetGrid(1, 0, new Grid());
-        bag->GetGridGroup()->SetGrid(1, 1, new Grid());
-        bag->GetGridGroup()->SetGrid(1, 2, new Grid());
-        bag->GetGridGroup()->SetGrid(2, 0, new Grid());
-        bag->GetGridGroup()->SetGrid(2, 1, new Grid());
-        bag->GetGridGroup()->SetGrid(2, 2, new Grid());
-        bag->GetGridGroup()->SetGrid(3, 0, new Grid());
-        bag->GetGridGroup()->SetGrid(3, 1, new Grid());
-        bag->GetGridGroup()->SetGrid(3, 2, new Grid());
+        auto bag = new Bag(bagId++);
+        bag->GetGridGroup()->AddGrid(0, 0, new Grid());
+        bag->GetGridGroup()->AddGrid(0, 1, new Grid());
+        bag->GetGridGroup()->AddGrid(0, 2, new Grid());
+        bag->GetGridGroup()->AddGrid(1, 0, new Grid());
+        bag->GetGridGroup()->AddGrid(1, 1, new Grid());
+        bag->GetGridGroup()->AddGrid(1, 2, new Grid());
+        bag->GetGridGroup()->AddGrid(2, 0, new Grid());
+        bag->GetGridGroup()->AddGrid(2, 1, new Grid());
+        bag->GetGridGroup()->AddGrid(2, 2, new Grid());
+        bag->GetGridGroup()->AddGrid(3, 0, new Grid());
+        bag->GetGridGroup()->AddGrid(3, 1, new Grid());
+        bag->GetGridGroup()->AddGrid(3, 2, new Grid());
         backpackLayout.AddBag(bag);
     }
 
     //{
-    //    auto bag = new Bag(6);
-    //    bag->GetGridGroup()->SetGrid(0, 0, new Grid());
-    //    bag->GetGridGroup()->SetGrid(0, 1, new Grid());
-    //    bag->GetGridGroup()->SetGrid(0, 2, new Grid());
-    //    bag->GetGridGroup()->SetGrid(1, 0, new Grid());
-    //    bag->GetGridGroup()->SetGrid(1, 1, new Grid());
-    //    bag->GetGridGroup()->SetGrid(1, 2, new Grid());
-    //    bag->GetGridGroup()->SetGrid(2, 0, new Grid());
-    //    bag->GetGridGroup()->SetGrid(2, 1, new Grid());
-    //    bag->GetGridGroup()->SetGrid(2, 2, new Grid());
-    //    bag->GetGridGroup()->SetGrid(3, 0, new Grid());
-    //    bag->GetGridGroup()->SetGrid(3, 1, new Grid());
-    //    bag->GetGridGroup()->SetGrid(3, 2, new Grid());
+    //    auto bag = new Bag(bagId++);
+    //    bag->GetGridGroup()->AddGrid(0, 0, new Grid());
+    //    bag->GetGridGroup()->AddGrid(0, 1, new Grid());
+    //    bag->GetGridGroup()->AddGrid(0, 2, new Grid());
+    //    bag->GetGridGroup()->AddGrid(1, 0, new Grid());
+    //    bag->GetGridGroup()->AddGrid(1, 1, new Grid());
+    //    bag->GetGridGroup()->AddGrid(1, 2, new Grid());
+    //    bag->GetGridGroup()->AddGrid(2, 0, new Grid());
+    //    bag->GetGridGroup()->AddGrid(2, 1, new Grid());
+    //    bag->GetGridGroup()->AddGrid(2, 2, new Grid());
+    //    bag->GetGridGroup()->AddGrid(3, 0, new Grid());
+    //    bag->GetGridGroup()->AddGrid(3, 1, new Grid());
+    //    bag->GetGridGroup()->AddGrid(3, 2, new Grid());
     //    backpackLayout.AddBag(bag);
     //}
 
-    
+    int itemId = 1;
+
+    for (int i = 0; i < 2; i++)
+    {
+        auto item = new Item(itemId++);
+        item->GetGridGroup()->AddGrid(0, 0, new Grid());
+        backpackLayout.AddItem(item);
+    }
+
+    for (int i = 0; i < 2; i++)
+    {
+        auto item = new Item(itemId++);
+        item->GetGridGroup()->AddGrid(0, 0, new Grid());
+        item->GetGridGroup()->AddGrid(0, 1, new Grid());
+        backpackLayout.AddItem(item);
+    }
+
+    for (int i = 0; i < 2; i++)
+    {
+        auto item = new Item(itemId++);
+        item->GetGridGroup()->AddGrid(0, 0, new Grid());
+        item->GetGridGroup()->AddGrid(0, 1, new Grid());
+        item->GetGridGroup()->AddGrid(1, 0, new Grid());
+        backpackLayout.AddItem(item);
+    }
+
+    for (int i = 0; i < 2; i++)
+    {
+        auto item = new Item(itemId++);
+        item->GetGridGroup()->AddGrid(0, 0, new Grid());
+        item->GetGridGroup()->AddGrid(0, 1, new Grid());
+        item->GetGridGroup()->AddGrid(1, 0, new Grid());
+        item->GetGridGroup()->AddGrid(1, 1, new Grid());
+        backpackLayout.AddItem(item);
+    }
+
 
 
 
@@ -1373,8 +1647,8 @@ int main()
     auto end_us = now_us.time_since_epoch().count();
 
     // 显示当前毫秒
-    std::cout << "Milliseconds: " << end_ms - start_ms << ", LayoutCount: " << backpackLayout.GetLaytoutCount() << std::endl;
+    std::cout << "Milliseconds: " << end_ms - start_ms << ", m_LaytoutBagCount: " << backpackLayout.GetLaytoutBagCount() << ", m_LaytoutItemCount: " << backpackLayout.GetLaytoutItemCount() << std::endl;
 
     // 现实就消耗的微秒
-    std::cout << "Microseconds: " << end_us - start_us << ", LayoutCount: " << backpackLayout.GetLaytoutCount() << std::endl;
+    std::cout << "Microseconds: " << end_us - start_us << ", m_LaytoutBagCount: " << backpackLayout.GetLaytoutBagCount() << ", m_LaytoutItemCount: " << backpackLayout.GetLaytoutItemCount() << std::endl;
 }
