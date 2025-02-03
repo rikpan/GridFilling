@@ -1233,12 +1233,22 @@ public:
 
 
 
+        // 对物品大小由大到小排序
+        std::sort(m_Items.begin(), m_Items.end(), [](Item* a, Item* b)
+        {
+                return a->GetGridGroup()->GetVaildGridCount() > b->GetGridGroup()->GetVaildGridCount();
+            });
+        std::vector<int> itemSorts;
+        for (int i = 0; i < (int)m_Items.size(); ++i)
+            itemSorts.push_back(i);
+        m_ItemSorts.push_back(itemSorts);
+
+
+
         // 对包裹大小由大到小排序
         std::sort(m_MovableBags.begin(), m_MovableBags.end(), [](Bag* a, Bag* b) 
         {
-            auto _a = a->GetGridGroup();
-            auto _b = b->GetGridGroup();
-            return _a->GetWidth() * _a->GetHeight() > _b->GetWidth() * _b->GetHeight();
+            return a->GetGridGroup()->GetVaildGridCount() > b->GetGridGroup()->GetVaildGridCount();
         });
 
         // 递归包裹放置顺序
@@ -1247,11 +1257,11 @@ public:
             bagSorts.push_back(i);
 
         // 使用std::next_permutation生成全排列
-        do
-        {
+        //do
+        //{
             int maxWidth = 1, maxHeight = 1; // 第一个包裹，固定在0,0位置，也不允许移动
             LayoutBag(bagSorts, maxWidth, maxHeight, 0);
-        } while (std::next_permutation(bagSorts.begin(), bagSorts.end()));
+        //} while (std::next_permutation(bagSorts.begin(), bagSorts.end()));
 
         //// 递归包裹放置顺序
         //std::vector<int> nums;
@@ -1265,34 +1275,6 @@ public:
         //std::cout << "Bag Sorts:" << mBagSorts.size() << std::endl;
 
 
-
-        //// 对物品大小由大到小排序
-        //std::sort(m_Items.begin(), m_Items.end(), [](Item* a, Item* b)
-        //{
-        //    auto _a = a->GetGridGroup();
-        //    auto _b = b->GetGridGroup();
-        //    return _a->GetWidth() * _a->GetHeight() > _b->GetWidth() * _b->GetHeight();
-        //});
-
-        //// 递归包裹放置顺序
-        //nums.clear();
-        //for (int i = 0; i < (int)m_Items.size(); ++i)
-        //{
-        //    nums.push_back(i);
-        //}
-        ////mItemSorts.push_back(nums);
-        //Permutations(nums, 0, mItemSorts);
-
-        //std::cout << "Item Sorts:" << mItemSorts.size() << std::endl;
-
-
-
-        //// 开始递归放置可以移动的包裹
-        //for (int i = 0; i < (int)mBagSorts.size(); i++)
-        //{
-        //    int maxWidth = 1, maxHeight = 1; // 第一个包裹，固定在0,0位置，也不允许移动
-        //    LayoutBag(mBagSorts[i], maxWidth, maxHeight, 0);
-        //}
     }
 
     // 对nums做全排列
@@ -1321,38 +1303,27 @@ public:
             m_LaytoutBagCount++;
             
             // 将格子布局放入新的位置
-            //auto gridGroup = m_Backpack->GetGridGroup();
-            //for (int x = 0; x < gridGroup->GetWidth(); x++)
-            //{
-            //    for (int y = 0; y < gridGroup->GetHeight(); y++)
-            //    {
-            //        auto grid = gridGroup->GetGrid(x, y);
-            //        if (grid != NULL && grid->GetSubGrid() != NULL)
-            //            m_BackpackLayoutItemTransGridGroup->SetGrid(x, y, grid->GetSubGrid());
-            //    }
-            //}
-            //m_BackpackLayoutItemTrans->SetPos(m_BackpackTrans->GetPosX(), m_BackpackTrans->GetPosY());
-            //m_BackpackLayoutItemTrans->SetRotate(m_BackpackTrans->GetRotate());
-            //m_BackpackLayoutItemTrans->ResetReaminVaildGridCount();
+            auto gridGroup = m_Backpack->GetGridGroup();
+            for (int x = 0; x < gridGroup->GetWidth(); x++)
+            {
+                for (int y = 0; y < gridGroup->GetHeight(); y++)
+                {
+                    auto grid = gridGroup->GetGrid(x, y);
+                    if (grid != NULL && grid->GetSubGrid() != NULL)
+                        m_BackpackLayoutItemTransGridGroup->SetGrid(x, y, grid->GetSubGrid());
+                }
+            }
+            m_BackpackLayoutItemTrans->SetPos(m_BackpackTrans->GetPosX(), m_BackpackTrans->GetPosY());
+            m_BackpackLayoutItemTrans->SetRotate(m_BackpackTrans->GetRotate());
+            m_BackpackLayoutItemTrans->ResetReaminVaildGridCount();
 
             // 开始递归放置物品
-            //for (int i = 0; i < (int)mItemSorts.size(); i++)
-            //{
-            //    int maxWidth = 1, maxHeight = 1; // 第一个物品，固定在0,0位置，也不允许移动
-            //    LayoutItem(mItemSorts[i], maxWidth, maxHeight, 0);
-            //}
-
-            // 递归包裹放置顺序
-            //std::vector<int> itemSorts;
-            //for (int i = 0; i < (int)mItemSorts.size(); ++i)
-            //    itemSorts.push_back(i);
-
-            //// 使用std::next_permutation生成全排列
-            //do
-            //{
-            //    int maxWidth = 1, maxHeight = 1; // 第一个包裹，固定在0,0位置，也不允许移动
-            //    LayoutBag(itemSorts, maxWidth, maxHeight, 0);
-            //} while (std::next_permutation(itemSorts.begin(), itemSorts.end()));
+            for (int i = 0; i < (int)m_ItemSorts.size(); i++)
+            {
+                int maxWidth = 1, maxHeight = 1; // 第一个物品，固定在0,0位置，也不允许移动
+                if (!LayoutItem(m_ItemSorts[i], maxWidth, maxHeight, 0))
+                    return false;
+            }
 
             return true;
         }
@@ -1393,6 +1364,8 @@ public:
 
                             // 继续放置下一个包裹
                             auto ret = LayoutBag(bagSort, maxWidth, maxHeight, bagIdx + 1);
+                            if (!ret)
+                                return false;
 
                             maxWidth -= bagTrans->GetWidth();
                             maxHeight -= bagTrans->GetHeight();
@@ -1403,9 +1376,6 @@ public:
                                 delete bagTrans;
                                 throw std::exception("可移动包裹移除失败!");
                             }
-
-                            if (!ret)
-                                return false;
                         }
                     }
                 }
@@ -1429,6 +1399,7 @@ public:
         }
         else if (itemIdx >= (int)itemSort.size())
         {
+            m_LaytoutItemCount++;
             return false;
         }
 
@@ -1458,8 +1429,7 @@ public:
 
                         // 必须不与本Transform重叠，且必须与本Transform相邻
                         if (m_BackpackLayoutItemTrans->GetChildrenCount() == 0 ||
-                            !m_BackpackLayoutItemTrans->IsOverlapTransform(itemTrans) &&
-                            m_BackpackLayoutItemTrans->IsTouchTransform(itemTrans))
+                            !m_BackpackLayoutItemTrans->IsOverlapTransform(itemTrans))
                         {
                             // 尝试添加，在有上面两个判断下，这里不可能失败
                             if (!m_BackpackLayoutItemTrans->TryAddTransform(itemTrans))
@@ -1473,6 +1443,8 @@ public:
 
                             // 继续放置下一个物品
                             auto ret = LayoutItem(itemSort, maxWidth, maxHeight, itemIdx + 1);
+                            if (!ret)
+                                return false;
 
                             maxWidth -= itemTrans->GetWidth();
                             maxHeight -= itemTrans->GetHeight();
@@ -1483,16 +1455,13 @@ public:
                                 delete itemTrans;
                                 throw std::exception("物品移除失败!");
                             }
-
-                            if (!ret)
-                                return false;
                         }
                     }
                 }
             }
         }
 
-        return false;
+        return true;
     }
 
     int GetLaytoutItemCount() const
@@ -1513,6 +1482,8 @@ private:
     GridGroupTransform* m_BackpackLayoutItemTrans = NULL;
     GridGroup* m_BackpackLayoutItemTransGridGroup = NULL;
     int m_LaytoutItemCount = 0;
+
+    std::vector<std::vector<int>> m_ItemSorts;
 };
 
 int main()
@@ -1606,39 +1577,43 @@ int main()
 
     int itemId = 1;
 
-    for (int i = 0; i < 2; i++)
+    for (int i = 0; i < 20; i++)
     {
-        auto item = new Item(itemId++);
+        auto item = new Item(itemId);
         item->GetGridGroup()->AddGrid(0, 0, new Grid());
         backpackLayout.AddItem(item);
     }
+    itemId++;
 
-    for (int i = 0; i < 2; i++)
+    for (int i = 0; i < 4; i++)
     {
-        auto item = new Item(itemId++);
+        auto item = new Item(itemId);
         item->GetGridGroup()->AddGrid(0, 0, new Grid());
         item->GetGridGroup()->AddGrid(0, 1, new Grid());
         backpackLayout.AddItem(item);
     }
+    itemId++;
 
-    for (int i = 0; i < 2; i++)
+    for (int i = 0; i < 3; i++)
     {
-        auto item = new Item(itemId++);
+        auto item = new Item(itemId);
         item->GetGridGroup()->AddGrid(0, 0, new Grid());
         item->GetGridGroup()->AddGrid(0, 1, new Grid());
         item->GetGridGroup()->AddGrid(1, 0, new Grid());
         backpackLayout.AddItem(item);
     }
+    itemId++;
 
     for (int i = 0; i < 2; i++)
     {
-        auto item = new Item(itemId++);
+        auto item = new Item(itemId);
         item->GetGridGroup()->AddGrid(0, 0, new Grid());
         item->GetGridGroup()->AddGrid(0, 1, new Grid());
         item->GetGridGroup()->AddGrid(1, 0, new Grid());
         item->GetGridGroup()->AddGrid(1, 1, new Grid());
         backpackLayout.AddItem(item);
     }
+    itemId++;
 
 
 
