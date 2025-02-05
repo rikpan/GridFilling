@@ -7,6 +7,44 @@
 
 #define DEBUG_STRING 1
 
+
+
+#define ROTATE_0(x, y, rx, ry, originWidth, originHeight) \
+    rx = x; \
+    ry = y;
+
+#define ROTATE_90(x, y, rx, ry, originWidth, originHeight) \
+    rx = y; \
+    ry = originWidth - (x) - 1;
+
+#define ROTATE_180(x, y, rx, ry, originWidth, originHeight) \
+    rx = originWidth - (x) - 1; \
+    ry = originHeight - (y) - 1;
+
+#define ROTATE_270(x, y, rx, ry, originWidth, originHeight) \
+    rx = originHeight - (y) - 1; \
+    ry = x;
+
+
+
+#define INVROTATE_0(x, y, rx, ry, originWidth, originHeight) \
+    rx = x; \
+    ry = y;
+
+#define INVROTATE_90(x, y, rx, ry, originWidth, originHeight) \
+    rx = y; \
+    ry = originHeight - (x) - 1;
+
+#define INVROTATE_180(x, y, rx, ry, originWidth, originHeight) \
+    rx = originWidth - (x) - 1; \
+    ry = originHeight - (y) - 1;
+
+#define INVROTATE_270(x, y, rx, ry, originWidth, originHeight) \
+    rx = originWidth - (y) - 1; \
+    ry = x;
+
+
+
 // 顺时针旋转
 enum class Rotation
 {
@@ -151,27 +189,23 @@ public:
     }
 
     // 顺时针旋转
-    void GetRotationPos(int x, int y, Rotation r, int* rx, int* ry) const
+    void GetRotationPos(int x, int y, Rotation r, int& rx, int& ry) const
     {
         if (r == Rotation::_0)
         {
-            *rx = x;
-            *ry = y;
+            ROTATE_0(x, y, rx, ry, m_Width, m_Height);
         }
         else if (r == Rotation::_90)
         {
-            *rx = y;
-            *ry = m_Width - x - 1;
+            ROTATE_90(x, y, rx, ry, m_Width, m_Height);
         }
         else if (r == Rotation::_180)
         {
-            *rx = m_Width - x - 1;
-            *ry = m_Height - y - 1;
+            ROTATE_180(x, y, rx, ry, m_Width, m_Height);
         }
         else if (r == Rotation::_270)
         {
-            *rx = m_Height - y - 1;
-            *ry = x;
+            ROTATE_270(x, y, rx, ry, m_Width, m_Height);
         }
         else
         {
@@ -183,27 +217,23 @@ public:
     }
 
     // 逆时针旋转
-    void GetInvRotationPos(int x, int y, Rotation r, int* rx, int* ry) const
+    void GetInvRotationPos(int x, int y, Rotation r, int& rx, int& ry) const
     {
         if (r == Rotation::_0)
         {
-            *rx = x;
-            *ry = y;
+            INVROTATE_0(x, y, rx, ry, m_Width, m_Height);
         }
         else if (r == Rotation::_90)
         {
-            *rx = y;
-            *ry = m_Height - x - 1;
+            INVROTATE_90(x, y, rx, ry, m_Width, m_Height);
         }
         else if (r == Rotation::_180)
         {
-            *rx = m_Height - x - 1;
-            *ry = m_Width - y - 1;
+            INVROTATE_180(x, y, rx, ry, m_Width, m_Height);
         }
         else if (r == Rotation::_270)
         {
-            *rx = m_Width - y - 1;
-            *ry = x;
+            INVROTATE_270(x, y, rx, ry, m_Width, m_Height);
         }
         else
         {
@@ -258,9 +288,9 @@ public:
             for (int y = 0; y < m_Height; y++)
             {
                 int _90x, _90y;
-                GetRotationPos(x, y, Rotation::_90, &_90x, &_90y);
+                GetRotationPos(x, y, Rotation::_90, _90x, _90y);
                 int _180x, _180y;
-                GetRotationPos(x, y, Rotation::_180, &_180x, &_180y);
+                GetRotationPos(x, y, Rotation::_180, _180x, _180y);
                 if (GetGrid(x, y) != NULL)
                 {
                     m_RotationValid[1] |= GetGrid(_90x, _90y) == NULL; // x, y有grid，但90旋转的位置没有grid，那么就需要90旋转
@@ -399,7 +429,7 @@ public:
     Grid* GetGrid(int worldPosX, int worldPosY) const
     {
         int x, y;
-        m_GridGroup->GetInvRotationPos(worldPosX - m_PosX, worldPosY - m_PosY, m_Rotation, &x, &y);
+        m_GridGroup->GetInvRotationPos(worldPosX - m_PosX, worldPosY - m_PosY, m_Rotation, x, y);
         return m_GridGroup->GetGrid(x, y);
     }
 
@@ -407,7 +437,7 @@ public:
     Grid* GetGridLocal(int lx, int ly) const
     {
         int x, y;
-        m_GridGroup->GetInvRotationPos(lx, ly, m_Rotation, &x, &y);
+        m_GridGroup->GetInvRotationPos(lx, ly, m_Rotation, x, y);
         return m_GridGroup->GetGrid(x, y);
     }
 
@@ -434,11 +464,8 @@ public:
             {
                 for (auto _y = transPosY; _y < transPosY + transHeight; _y++)
                 {
-                    x = _x - transPosX;
-                    y = _y - transPosY;
+                    INVROTATE_0(_x - transPosX, _y - transPosY, x, y, transWidth, transHeight);
                     auto transGrid = transGrids[x][y];
-                    //if (transGrid != trans->GetGrid(_x, _y))
-                    //    return false;
                     if (transGrid != NULL)
                     {
                         x = _x - myPosX;
@@ -446,8 +473,6 @@ public:
                         if (x >= 0 && x < myWidth && y >= 0 && y < myHeight)
                         {
                             auto grid = myGrids[x][y];
-                            //if (grid != GetGrid(_x, _y))
-                            //    return false;
                             if (grid == NULL || grid->GetSubGrid() != NULL)
                                 // 这个位置已经有其他格子了，失败
                                 return true;
@@ -464,11 +489,8 @@ public:
             {
                 for (auto _y = transPosY; _y < transPosY + transWidth; _y++)
                 {
-                    x = _y - transPosY;
-                    y = transHeight - (_x - transPosX) - 1;
+                    INVROTATE_90(_x - transPosX, _y - transPosY, x, y, transWidth, transHeight);
                     auto transGrid = transGrids[x][y];
-                    //if (transGrid != trans->GetGrid(_x, _y))
-                    //    return false;
                     if (transGrid != NULL)
                     {
                         x = _x - myPosX;
@@ -476,8 +498,6 @@ public:
                         if (x >= 0 && x < myWidth && y >= 0 && y < myHeight)
                         {
                             auto grid = myGrids[x][y];
-                            //if (grid != GetGrid(_x, _y))
-                            //    return false;
                             if (grid == NULL || grid->GetSubGrid() != NULL)
                                 // 这个位置已经有其他格子了，失败
                                 return true;
@@ -494,11 +514,8 @@ public:
             {
                 for (auto _y = transPosY; _y < transPosY + transHeight; _y++)
                 {
-                    x = transWidth - (_x - transPosX) - 1;
-                    y = transHeight - (_y - transPosY) - 1;
+                    INVROTATE_180(_x - transPosX, _y - transPosY, x, y, transWidth, transHeight);
                     auto transGrid = transGrids[x][y];
-                    //if (transGrid != trans->GetGrid(_x, _y))
-                    //    return false;
                     if (transGrid != NULL)
                     {
                         x = _x - myPosX;
@@ -506,8 +523,6 @@ public:
                         if (x >= 0 && x < myWidth && y >= 0 && y < myHeight)
                         {
                             auto grid = myGrids[x][y];
-                            //if (grid != GetGrid(_x, _y))
-                            //    return false;
                             if (grid == NULL || grid->GetSubGrid() != NULL)
                                 // 这个位置已经有其他格子了，失败
                                 return true;
@@ -524,11 +539,8 @@ public:
             {
                 for (auto _y = transPosY; _y < transPosY + transWidth; _y++)
                 {
-                    x = transWidth - (_y - transPosY) - 1;
-                    y = _x - transPosX;
+                    INVROTATE_270(_x - transPosX, _y - transPosY, x, y, transWidth, transHeight);
                     auto transGrid = transGrids[x][y];
-                    //if (transGrid != trans->GetGrid(_x, _y))
-                    //    return false;
                     if (transGrid != NULL)
                     {
                         x = _x - myPosX;
@@ -536,8 +548,6 @@ public:
                         if (x >= 0 && x < myWidth && y >= 0 && y < myHeight)
                         {
                             auto grid = myGrids[x][y];
-                            //if (grid != GetGrid(_x, _y))
-                            //    return false;
                             if (grid == NULL || grid->GetSubGrid() != NULL)
                                 // 这个位置已经有其他格子了，失败
                                 return true;
@@ -564,29 +574,29 @@ public:
                     auto grid = GetGrid(x, y);
                     if (grid != NULL && grid->GetSubGrid() == NULL)
                     {
-                        auto gridLeft = GetGrid(x - 1, y);
-                        if (gridLeft == NULL || gridLeft->GetSubGrid() == NULL)
-                        {
-                            auto gridRight = GetGrid(x + 1, y);
-                            if (gridRight == NULL || gridRight->GetSubGrid() == NULL)
-                            {
-                                auto gridTop = GetGrid(x, y + 1);
-                                if (gridTop == NULL || gridTop->GetSubGrid() == NULL)
-                                {
-                                    auto gridBottom = GetGrid(x, y - 1);
-                                    if (gridBottom == NULL || gridBottom->GetSubGrid() == NULL)
-                                        return false;
-                                    else
-                                        return true;
-                                }
-                                else
-                                    return true;
-                            }
-                            else
-                                return true;
-                        }
-                        else
+                        grid = GetGrid(x - 1, y);
+                        if (grid != NULL && grid->GetSubGrid() != NULL)
                             return true;
+                        else
+                        {
+                            grid = GetGrid(x + 1, y);
+                            if (grid != NULL && grid->GetSubGrid() != NULL)
+                                return true;
+                            else
+                            {
+                                grid = GetGrid(x, y + 1);
+                                if (grid != NULL && grid->GetSubGrid() != NULL)
+                                    return true;
+                                else
+                                {
+                                    grid = GetGrid(x, y - 1);
+                                    if (grid != NULL && grid->GetSubGrid() != NULL)
+                                        return true;
+                                    else
+                                        return false;
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -612,17 +622,6 @@ public:
 
         m_ChildrenCount++;
 
-        //for (auto x = trans->GetPosX(); x < trans->GetPosX() + trans->GetWidth(); x++)
-        //{
-        //    for (auto y = trans->GetPosY(); y < trans->GetPosY() + trans->GetHeight(); y++)
-        //    {
-        //        auto grid = GetGrid(x, y);
-        //        if (grid != NULL)
-        //            // 这个位置放不下，失败
-        //            return false;
-        //    }
-        //}
-
         // 将trans放入
         if (trans->GetRotate() == Rotation::_0)
         {
@@ -630,11 +629,8 @@ public:
             {
                 for (auto _y = transPosY; _y < transPosY + transHeight; _y++)
                 {
-                    x = _x - transPosX;
-                    y = _y - transPosY;
+                    INVROTATE_0(_x - transPosX, _y - transPosY, x, y, transWidth, transHeight);
                     auto transGrid = transGrids[x][y];
-                    //if (transGrid != trans->GetGrid(_x, _y))
-                    //    return false;
                     if (transGrid != NULL)
                     {
                         x = _x - myPosX;
@@ -666,11 +662,8 @@ public:
             {
                 for (auto _y = transPosY; _y < transPosY + transWidth; _y++)
                 {
-                    x = _y - transPosY;
-                    y = transHeight - (_x - transPosX) - 1;
+                    INVROTATE_90(_x - transPosX, _y - transPosY, x, y, transWidth, transHeight);
                     auto transGrid = transGrids[x][y];
-                    //if (transGrid != trans->GetGrid(_x, _y))
-                    //    return false;
                     if (transGrid != NULL)
                     {
                         x = _x - myPosX;
@@ -702,11 +695,8 @@ public:
             {
                 for (auto _y = transPosY; _y < transPosY + transHeight; _y++)
                 {
-                    x = transWidth - (_x - transPosX) - 1;
-                    y = transHeight - (_y - transPosY) - 1;
+                    INVROTATE_180(_x - transPosX, _y - transPosY, x, y, transWidth, transHeight);
                     auto transGrid = transGrids[x][y];
-                    //if (transGrid != trans->GetGrid(_x, _y))
-                    //    return false;
                     if (transGrid != NULL)
                     {
                         x = _x - myPosX;
@@ -738,11 +728,8 @@ public:
             {
                 for (auto _y = transPosY; _y < transPosY + transWidth; _y++)
                 {
-                    x = transWidth - (_y - transPosY) - 1;
-                    y = _x - transPosX;
+                    INVROTATE_270(_x - transPosX, _y - transPosY, x, y, transWidth, transHeight);
                     auto transGrid = transGrids[x][y];
-                    //if (transGrid != trans->GetGrid(_x, _y))
-                    //    return false;
                     if (transGrid != NULL)
                     {
                         x = _x - myPosX;
@@ -800,11 +787,8 @@ public:
             {
                 for (auto _y = transPosY; _y < transPosY + transHeight; _y++)
                 {
-                    x = _x - transPosX;
-                    y = _y - transPosY;
+                    INVROTATE_0(_x - transPosX, _y - transPosY, x, y, transWidth, transHeight);
                     auto transGrid = transGrids[x][y];
-                    //if (transGrid != trans->GetGrid(_x, _y))
-                    //    return false;
                     if (transGrid != NULL)
                     {
                         x = _x - myPosX;
@@ -828,11 +812,8 @@ public:
             {
                 for (auto _y = transPosY; _y < transPosY + transWidth; _y++)
                 {
-                    x = _y - transPosY;
-                    y = transHeight - (_x - transPosX) - 1;
+                    INVROTATE_90(_x - transPosX, _y - transPosY, x, y, transWidth, transHeight);
                     auto transGrid = transGrids[x][y];
-                    //if (transGrid != trans->GetGrid(_x, _y))
-                    //    return false;
                     if (transGrid != NULL)
                     {
                         x = _x - myPosX;
@@ -856,11 +837,8 @@ public:
             {
                 for (auto _y = transPosY; _y < transPosY + transHeight; _y++)
                 {
-                    x = transWidth - (_x - transPosX) - 1;
-                    y = transHeight - (_y - transPosY) - 1;
+                    INVROTATE_180(_x - transPosX, _y - transPosY, x, y, transWidth, transHeight);
                     auto transGrid = transGrids[x][y];
-                    //if (transGrid != trans->GetGrid(_x, _y))
-                    //    return false;
                     if (transGrid != NULL)
                     {
                         x = _x - myPosX;
@@ -884,11 +862,8 @@ public:
             {
                 for (auto _y = transPosY; _y < transPosY + transWidth; _y++)
                 {
-                    x = transWidth - (_y - transPosY) - 1;
-                    y = _x - transPosX;
+                    INVROTATE_270(_x - transPosX, _y - transPosY, x, y, transWidth, transHeight);
                     auto transGrid = transGrids[x][y];
-                    //if (transGrid != trans->GetGrid(_x, _y))
-                    //    return false;
                     if (transGrid != NULL)
                     {
                         x = _x - myPosX;
@@ -913,11 +888,6 @@ public:
 
         return true;
     }
-
-    //std::set<GridGroupTransform*>* GetChildren() const
-    //{
-    //    return m_Children;
-    //}
 
     int GetChildrenCount() const
     {
