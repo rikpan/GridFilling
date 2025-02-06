@@ -5,10 +5,11 @@
 #include <sstream>
 #include <chrono>
 
+// 是否生成调试字符串
 #define DEBUG_STRING 1
 
 
-
+// 将x,y坐标顺时针旋转到rx,ry坐标
 #define ROTATE_0(x, y, rx, ry, originWidth, originHeight) \
     rx = x; \
     ry = y;
@@ -27,6 +28,7 @@
 
 
 
+// 将x,y坐标逆时针旋转到rx,ry坐标
 #define INVROTATE_0(x, y, rx, ry, originWidth, originHeight) \
     rx = x; \
     ry = y;
@@ -904,6 +906,7 @@ public:
         return m_RemainVaildGridCount;
     }
 
+    // 预先分配m_DebugString的空间，能在Debug下提升一些性能
     void RebuildDebugString()
     {
 #if _DEBUG && DEBUG_STRING
@@ -927,6 +930,22 @@ public:
 #endif
     }
 
+    // 生成调试字符串，如下
+    // ·, 表示这个位置没有格子，是无效位置
+    // ×, 表示这个位置有格子，但是这个格子还没有放置东西
+    // 0-9等符号, 表示这个位置有格子，且放置了东西，这个东西的id是0-9等符号
+    // 注意：以下有多个1，表示1这个东西有多个，被多次放置了
+    // 
+    // ·  ·  ·  ×  ×  ·  ·  ·  ·  · 
+    // 2  7  7  3  3  ·  ·  ·  ·  · 
+    // 2  7  7  7  3  ·  ·  ·  ·  · 
+    // 5  5  7  7  4  4  ·  ·  ·  · 
+    // 5  5  5  7  4  4  ·  ·  ·  · 
+    // 5  5  5  1  ·  ·  ·  ·  ·  · 
+    // 9  9  9  9  ·  ·  ·  ·  ·  · 
+    // 6  9  9  1  ·  3  3  ·  ·  · 
+    // 6  9  9  8  8  8  3  ·  ·  · 
+    // 6  9  9  1  8  8  ·  ·  ·  · 
     void GenDebugString()
     {
 #if _DEBUG && DEBUG_STRING
@@ -1217,11 +1236,17 @@ public:
         for (int i = 0; i < (int)m_MovableBags.size(); ++i)
             bagSorts.push_back(i);
 
+        for (int i = 0; i < (int)bagSorts.size(); i++)
+        {
+            int maxWidth = 1, maxHeight = 1; // 第一个包裹，固定在0,0位置，也不允许移动
+            auto ret = PlaceBag(bagSorts, maxWidth, maxHeight, i);
+            if (!ret)
+                break;
+        }
+
         // 使用std::next_permutation生成全排列
         //do
         //{
-            int maxWidth = 1, maxHeight = 1; // 第一个包裹，固定在0,0位置，也不允许移动
-            PlaceBag(bagSorts, maxWidth, maxHeight, 0);
         //} while (std::next_permutation(bagSorts.begin(), bagSorts.end()));
     }
 
@@ -1250,9 +1275,12 @@ public:
             m_BackpackPlaceItemTrans->ResetReaminVaildGridCount();
 
             // 放置物品
-            int maxWidth = 1, maxHeight = 1; // 第一个物品，固定在0,0位置，也不允许移动
-            if (!PlaceItem(m_ItemSorts, maxWidth, maxHeight, 0))
-                return false;
+            for (int i = 0; i < (int)m_ItemSorts.size(); i++)
+            {
+                auto ret = PlaceItem(m_ItemSorts, i);
+                if (!ret)
+                    return false;
+            }
 
             return true;
         }
@@ -1289,8 +1317,13 @@ public:
                             maxWidth += bagTrans->GetWidth();
                             maxHeight += bagTrans->GetHeight();
 
-                            // 继续放置下一个包裹
-                            auto ret = PlaceBag(bagSort, maxWidth, maxHeight, bagIdx + 1);
+                            // 继续放置下一个包裹, i可以等于bagSort.size()的原因是将成功条件全部归到本函数开头那段去
+                            for (int i = bagIdx + 1; i <= (int)bagSort.size(); i++)
+                            {
+                                auto ret = PlaceBag(bagSort, maxWidth, maxHeight, i);
+                                if (!ret)
+                                    return false;
+                            }
 
                             maxWidth -= bagTrans->GetWidth();
                             maxHeight -= bagTrans->GetHeight();
@@ -1300,9 +1333,6 @@ public:
                             {
                                 throw std::exception("可移动包裹移除失败!");
                             }
-
-                            if (!ret)
-                                return false;
                         }
                     }
                 }
@@ -1317,31 +1347,32 @@ public:
         return m_PlaceBagCount;
     }
 
-    bool PlaceItem(std::vector<int>& itemSort, int& maxWidth, int& maxHeight, int itemIdx)
+    bool PlaceItem(std::vector<int>& itemSort, int itemIdx)
     {
         if (m_BackpackPlaceItemTrans->GetReaminVaildGridCount() == 0)
         {
+            // 背包已经放满
             m_PlaceItemCount++;
             return false;
         }
         else if (itemIdx >= (int)itemSort.size())
         {
-            m_PlaceItemCount++;
-            return false;
+            // 已将能放的全放入了
+            return true;
         }
 
         auto item = m_Items[itemSort[itemIdx]];
         auto itemTrans = item->GetGridGroupTransform();
         if (item->GetGridGroup()->GetVaildGridCount() > m_BackpackPlaceItemTrans->GetReaminVaildGridCount())
         {
+            // 物品过大
             return true;
         }
 
         // 遍历物品能放入的所有位置，判断是否可以放入
-        // 需要遍历的最大数值，是所有物品的长宽之和
-        for (int x = 0; x < maxWidth; x++)
+        for (int x = 0; x < m_BackpackPlaceItemTrans->GetWidth() - itemTrans->GetWidth() + 1; x++)
         {
-            for (int y = 0; y < maxHeight; y++)
+            for (int y = 0; y < m_BackpackPlaceItemTrans->GetHeight() - itemTrans->GetHeight() + 1; y++)
             {
                 // 设置位置
                 itemTrans->SetPos(x, y);
@@ -1354,7 +1385,7 @@ public:
                         // 设置旋转
                         itemTrans->SetRotate((Rotation)r);
 
-                        // 必须不与本Transform重叠，且必须与本Transform相邻
+                        // 必须不与本Transform重叠
                         if (!m_BackpackPlaceItemTrans->IsOverlapTransform(itemTrans))
                         {
                             // 尝试添加，在有上面两个判断下，这里不可能失败
@@ -1363,23 +1394,19 @@ public:
                                 throw std::exception("物品放置失败!");
                             }
 
-                            maxWidth += itemTrans->GetWidth();
-                            maxHeight += itemTrans->GetHeight();
-
-                            // 继续放置下一个物品
-                            auto ret = PlaceItem(itemSort, maxWidth, maxHeight, itemIdx + 1);
-
-                            maxWidth -= itemTrans->GetWidth();
-                            maxHeight -= itemTrans->GetHeight();
+                            // 继续放置下一个物品, i可以等于itemSort.size()的原因是将成功条件全部归到本函数开头那段去
+                            for (int i = itemIdx + 1; i <= (int)itemSort.size(); i++)
+                            {
+                                auto ret = PlaceItem(itemSort, i);
+                                if (!ret)
+                                    return false;
+                            }
 
                             // 移除再继续
                             if (!m_BackpackPlaceItemTrans->TryRemoveTransform(itemTrans))
                             {
                                 throw std::exception("物品移除失败!");
                             }
-
-                            if (!ret)
-                                return false;
                         }
                     }
                 }
@@ -1483,62 +1510,62 @@ int main()
         backpackPlacer.AddBag(bag);
     }
 
-    //{
-    //    auto bag = new Bag(bagId++);
-    //    bag->GetGridGroup()->AddGrid(0, 0, new Grid());
-    //    bag->GetGridGroup()->AddGrid(0, 1, new Grid());
-    //    bag->GetGridGroup()->AddGrid(0, 2, new Grid());
-    //    bag->GetGridGroup()->AddGrid(1, 0, new Grid());
-    //    bag->GetGridGroup()->AddGrid(1, 1, new Grid());
-    //    bag->GetGridGroup()->AddGrid(1, 2, new Grid());
-    //    bag->GetGridGroup()->AddGrid(2, 0, new Grid());
-    //    bag->GetGridGroup()->AddGrid(2, 1, new Grid());
-    //    bag->GetGridGroup()->AddGrid(2, 2, new Grid());
-    //    bag->GetGridGroup()->AddGrid(3, 0, new Grid());
-    //    bag->GetGridGroup()->AddGrid(3, 1, new Grid());
-    //    bag->GetGridGroup()->AddGrid(3, 2, new Grid());
-    //    backpackPlacer.AddBag(bag);
-    //}
+    {
+        auto bag = new Bag(bagId++);
+        bag->GetGridGroup()->AddGrid(0, 0, new Grid());
+        bag->GetGridGroup()->AddGrid(0, 1, new Grid());
+        bag->GetGridGroup()->AddGrid(0, 2, new Grid());
+        bag->GetGridGroup()->AddGrid(1, 0, new Grid());
+        bag->GetGridGroup()->AddGrid(1, 1, new Grid());
+        bag->GetGridGroup()->AddGrid(1, 2, new Grid());
+        bag->GetGridGroup()->AddGrid(2, 0, new Grid());
+        bag->GetGridGroup()->AddGrid(2, 1, new Grid());
+        bag->GetGridGroup()->AddGrid(2, 2, new Grid());
+        bag->GetGridGroup()->AddGrid(3, 0, new Grid());
+        bag->GetGridGroup()->AddGrid(3, 1, new Grid());
+        bag->GetGridGroup()->AddGrid(3, 2, new Grid());
+        backpackPlacer.AddBag(bag);
+    }
 
     int itemId = 1;
 
-    //for (int i = 0; i < 20; i++)
-    //{
-    //    auto item = new Item(itemId);
-    //    item->GetGridGroup()->AddGrid(0, 0, new Grid());
-    //    backpackPlace.AddItem(item);
-    //}
-    //itemId++;
+    for (int i = 0; i < 20; i++)
+    {
+        auto item = new Item(itemId);
+        item->GetGridGroup()->AddGrid(0, 0, new Grid());
+        backpackPlacer.AddItem(item);
+    }
+    itemId++;
 
-    //for (int i = 0; i < 4; i++)
-    //{
-    //    auto item = new Item(itemId);
-    //    item->GetGridGroup()->AddGrid(0, 0, new Grid());
-    //    item->GetGridGroup()->AddGrid(0, 1, new Grid());
-    //    backpackPlace.AddItem(item);
-    //}
-    //itemId++;
+    for (int i = 0; i < 4; i++)
+    {
+        auto item = new Item(itemId);
+        item->GetGridGroup()->AddGrid(0, 0, new Grid());
+        item->GetGridGroup()->AddGrid(0, 1, new Grid());
+        backpackPlacer.AddItem(item);
+    }
+    itemId++;
 
-    //for (int i = 0; i < 3; i++)
-    //{
-    //    auto item = new Item(itemId);
-    //    item->GetGridGroup()->AddGrid(0, 0, new Grid());
-    //    item->GetGridGroup()->AddGrid(0, 1, new Grid());
-    //    item->GetGridGroup()->AddGrid(1, 0, new Grid());
-    //    backpackPlace.AddItem(item);
-    //}
-    //itemId++;
+    for (int i = 0; i < 3; i++)
+    {
+        auto item = new Item(itemId);
+        item->GetGridGroup()->AddGrid(0, 0, new Grid());
+        item->GetGridGroup()->AddGrid(0, 1, new Grid());
+        item->GetGridGroup()->AddGrid(1, 0, new Grid());
+        backpackPlacer.AddItem(item);
+    }
+    itemId++;
 
-    //for (int i = 0; i < 2; i++)
-    //{
-    //    auto item = new Item(itemId);
-    //    item->GetGridGroup()->AddGrid(0, 0, new Grid());
-    //    item->GetGridGroup()->AddGrid(0, 1, new Grid());
-    //    item->GetGridGroup()->AddGrid(1, 0, new Grid());
-    //    item->GetGridGroup()->AddGrid(1, 1, new Grid());
-    //    backpackPlace.AddItem(item);
-    //}
-    //itemId++;
+    for (int i = 0; i < 2; i++)
+    {
+        auto item = new Item(itemId);
+        item->GetGridGroup()->AddGrid(0, 0, new Grid());
+        item->GetGridGroup()->AddGrid(0, 1, new Grid());
+        item->GetGridGroup()->AddGrid(1, 0, new Grid());
+        item->GetGridGroup()->AddGrid(1, 1, new Grid());
+        backpackPlacer.AddItem(item);
+    }
+    itemId++;
 
     {
         auto item = new Item(itemId);
@@ -1554,14 +1581,14 @@ int main()
     }
     itemId++;
 
-    //{
-    //    auto item = new Item(itemId);
-    //    item->GetGridGroup()->AddGrid(0, 0, new Grid());
-    //    item->GetGridGroup()->AddGrid(1, 0, new Grid());
-    //    item->GetGridGroup()->AddGrid(2, 0, new Grid());
-    //    backpackPlacer.AddItem(item);
-    //}
-    //itemId++;
+    {
+        auto item = new Item(itemId);
+        item->GetGridGroup()->AddGrid(0, 0, new Grid());
+        item->GetGridGroup()->AddGrid(1, 0, new Grid());
+        item->GetGridGroup()->AddGrid(2, 0, new Grid());
+        backpackPlacer.AddItem(item);
+    }
+    itemId++;
 
     {
         auto item = new Item(itemId);
@@ -1608,14 +1635,14 @@ int main()
     }
     itemId++;
 
-    //{
-    //    auto item = new Item(itemId);
-    //    item->GetGridGroup()->AddGrid(0, 0, new Grid());
-    //    item->GetGridGroup()->AddGrid(1, 0, new Grid());
-    //    item->GetGridGroup()->AddGrid(2, 0, new Grid());
-    //    backpackPlacer.AddItem(item);
-    //}
-    //itemId++;
+    {
+        auto item = new Item(itemId);
+        item->GetGridGroup()->AddGrid(0, 0, new Grid());
+        item->GetGridGroup()->AddGrid(1, 0, new Grid());
+        item->GetGridGroup()->AddGrid(2, 0, new Grid());
+        backpackPlacer.AddItem(item);
+    }
+    itemId++;
 
     {
         auto item = new Item(itemId);
@@ -1633,11 +1660,11 @@ int main()
     }
     itemId++;
 
-    //{
-    //    auto item = new Item(itemId);
-    //    backpackPlacer.AddItem(item);
-    //}
-    //itemId++;
+    {
+        auto item = new Item(itemId);
+        backpackPlacer.AddItem(item);
+    }
+    itemId++;
 
     // 开始时间，微秒
     auto startUs = std::chrono::time_point_cast<std::chrono::microseconds>(std::chrono::system_clock::now()).time_since_epoch().count();
