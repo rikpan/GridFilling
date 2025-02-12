@@ -1,6 +1,5 @@
-﻿#include <iostream>
-#include <list>
-#include <set>
+#include <iostream>
+#include <algorithm>
 #include <queue>
 #include <sstream>
 #include <chrono>
@@ -622,8 +621,6 @@ public:
 
         int x, y;
 
-        m_ChildrenCount++;
-
         // 将trans放入
         if (trans->GetRotate() == Rotation::_0)
         {
@@ -779,9 +776,6 @@ public:
 
         int x, y;
 
-        if (m_ChildrenCount == 0)
-            return false;
-
         // 将trans移除
         if (trans->GetRotate() == Rotation::_0)
         {
@@ -884,16 +878,14 @@ public:
             }
         }
 
-        m_ChildrenCount--;
-
         GenDebugString();
 
         return true;
     }
 
-    int GetChildrenCount() const
+    int GetVaildGridCount()
     {
-        return m_ChildrenCount;
+        return m_GridGroup->GetVaildGridCount();
     }
 
     void ResetReaminVaildGridCount()
@@ -934,7 +926,7 @@ public:
     // ·, 表示这个位置没有格子，是无效位置
     // ×, 表示这个位置有格子，但是这个格子还没有放置东西
     // 0-9等符号, 表示这个位置有格子，且放置了东西，这个东西的id是0-9等符号
-    // 注意：以下有多个1，表示1这个东西有多个，被多次放置了
+    // 注意：以下的多个1相互没有挨着，表示1这个东西只占1个格子，且放置了多个
     // 
     // ·  ·  ·  ×  ×  ·  ·  ·  ·  · 
     // 2  7  7  3  3  ·  ·  ·  ·  · 
@@ -979,7 +971,6 @@ private:
     GridGroup* m_GridGroup = NULL; // 原始数据
     int m_PosX = 0, m_PosY = 0; // 局部位置，左下角
     Rotation m_Rotation = Rotation::_0; // 旋转
-    int m_ChildrenCount = 0;
     int m_RemainVaildGridCount = 0; // 剩余有效格子数量
     char16_t* m_DebugString; // 调试用字符串
 };
@@ -1189,6 +1180,7 @@ public:
         if (m_BackpackTrans != NULL)
             delete m_BackpackTrans;
         m_BackpackTrans = new GridGroupTransform(m_Backpack->GetGridGroup());
+        m_BackpackTrans->ResetReaminVaildGridCount();
 
         if (m_BackpackPlaceItemTrans != NULL)
             delete m_BackpackPlaceItemTrans;
@@ -1306,7 +1298,8 @@ public:
 
                         // 必须不与本Transform重叠，且必须与本Transform相邻
                         if (!m_BackpackTrans->IsOverlapTransform(bagTrans) &&
-                            (m_BackpackTrans->GetChildrenCount() == 0 || m_BackpackTrans->IsTouchTransform(bagTrans)))
+                            (m_BackpackTrans->GetReaminVaildGridCount() == m_BackpackTrans->GetVaildGridCount() || 
+                             m_BackpackTrans->IsTouchTransform(bagTrans)))
                         {
                             // 尝试添加，在有上面两个判断下，这里不可能失败
                             if (!m_BackpackTrans->TryAddTransform(bagTrans))
