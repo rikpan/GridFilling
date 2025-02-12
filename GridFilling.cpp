@@ -1,4 +1,4 @@
-#include <iostream>
+﻿#include <iostream>
 #include <algorithm>
 #include <queue>
 #include <sstream>
@@ -1435,88 +1435,129 @@ int main()
 {
     BackpackPlacer backpackPlacer;
 
-    auto backpack = new Backpack(10, 10);
+    auto backpack = new Backpack(8, 8);
     backpackPlacer.SetBackpack(backpack);
     int bagId = 1;
 
-    {
-        auto bag = new Bag(bagId++);
-        bag->GetGridGroup()->AddGrid(0, 0, new Grid());
-        bag->GetGridGroup()->AddGrid(0, 1, new Grid());
-        bag->GetGridGroup()->AddGrid(1, 0, new Grid());
-        bag->GetGridGroup()->AddGrid(1, 1, new Grid());
-        backpackPlacer.AddBag(bag);
-    }
+    //{
+    //    auto bag = new Bag(bagId++);
+    //    bag->GetGridGroup()->AddGrid(0, 0, new Grid());
+    //    bag->GetGridGroup()->AddGrid(0, 1, new Grid());
+    //    bag->GetGridGroup()->AddGrid(1, 0, new Grid());
+    //    bag->GetGridGroup()->AddGrid(1, 1, new Grid());
+    //    backpackPlacer.AddBag(bag);
+    //}
+
+    //{
+    //    auto bag = new Bag(bagId++);
+    //    bag->GetGridGroup()->AddGrid(0, 0, new Grid());
+    //    bag->GetGridGroup()->AddGrid(0, 1, new Grid());
+    //    bag->GetGridGroup()->AddGrid(1, 0, new Grid());
+    //    bag->GetGridGroup()->AddGrid(1, 1, new Grid());
+    //    bag->GetGridGroup()->AddGrid(2, 1, new Grid());
+    //    bag->GetGridGroup()->AddGrid(1, 2, new Grid());
+    //    bag->GetGridGroup()->AddGrid(2, 2, new Grid());
+    //    backpackPlacer.AddBag(bag);
+    //}
+
+    //{
+    //    auto bag = new Bag(bagId++);
+    //    bag->GetGridGroup()->AddGrid(0, 0, new Grid());
+    //    bag->GetGridGroup()->AddGrid(0, 1, new Grid());
+    //    bag->GetGridGroup()->AddGrid(1, 0, new Grid());
+    //    bag->GetGridGroup()->AddGrid(1, 1, new Grid());
+    //    bag->GetGridGroup()->AddGrid(2, 1, new Grid());
+    //    bag->GetGridGroup()->AddGrid(1, 2, new Grid());
+    //    bag->GetGridGroup()->AddGrid(2, 2, new Grid());
+    //    backpackPlacer.AddBag(bag);
+    //}
+
+    //{
+    //    auto bag = new Bag(bagId++);
+    //    bag->GetGridGroup()->AddGrid(0, 0, new Grid());
+    //    bag->GetGridGroup()->AddGrid(0, 1, new Grid());
+    //    bag->GetGridGroup()->AddGrid(0, 2, new Grid());
+    //    bag->GetGridGroup()->AddGrid(1, 0, new Grid());
+    //    bag->GetGridGroup()->AddGrid(1, 1, new Grid());
+    //    bag->GetGridGroup()->AddGrid(1, 2, new Grid());
+    //    bag->GetGridGroup()->AddGrid(2, 0, new Grid());
+    //    bag->GetGridGroup()->AddGrid(2, 1, new Grid());
+    //    bag->GetGridGroup()->AddGrid(2, 2, new Grid());
+    //    backpackPlacer.AddBag(bag);
+    //}
+
+    //{
+    //    auto bag = new Bag(bagId++);
+    //    bag->GetGridGroup()->AddGrid(0, 0, new Grid());
+    //    bag->GetGridGroup()->AddGrid(0, 1, new Grid());
+    //    bag->GetGridGroup()->AddGrid(0, 2, new Grid());
+    //    bag->GetGridGroup()->AddGrid(1, 0, new Grid());
+    //    bag->GetGridGroup()->AddGrid(1, 1, new Grid());
+    //    bag->GetGridGroup()->AddGrid(1, 2, new Grid());
+    //    bag->GetGridGroup()->AddGrid(2, 0, new Grid());
+    //    bag->GetGridGroup()->AddGrid(2, 1, new Grid());
+    //    bag->GetGridGroup()->AddGrid(2, 2, new Grid());
+    //    bag->GetGridGroup()->AddGrid(3, 0, new Grid());
+    //    bag->GetGridGroup()->AddGrid(3, 1, new Grid());
+    //    bag->GetGridGroup()->AddGrid(3, 2, new Grid());
+    //    backpackPlacer.AddBag(bag);
+    //}
+
+    //{
+    //    auto bag = new Bag(bagId++);
+    //    bag->GetGridGroup()->AddGrid(0, 0, new Grid());
+    //    bag->GetGridGroup()->AddGrid(0, 1, new Grid());
+    //    bag->GetGridGroup()->AddGrid(0, 2, new Grid());
+    //    bag->GetGridGroup()->AddGrid(1, 0, new Grid());
+    //    bag->GetGridGroup()->AddGrid(1, 1, new Grid());
+    //    bag->GetGridGroup()->AddGrid(1, 2, new Grid());
+    //    bag->GetGridGroup()->AddGrid(2, 0, new Grid());
+    //    bag->GetGridGroup()->AddGrid(2, 1, new Grid());
+    //    bag->GetGridGroup()->AddGrid(2, 2, new Grid());
+    //    bag->GetGridGroup()->AddGrid(3, 0, new Grid());
+    //    bag->GetGridGroup()->AddGrid(3, 1, new Grid());
+    //    bag->GetGridGroup()->AddGrid(3, 2, new Grid());
+    //    backpackPlacer.AddBag(bag);
+    //}
+
+    // 5
+    //{
+    //    auto bag = new Bag(bagId++);
+    //    bag->GetGridGroup()->AddGrid(0, 0, new Grid());
+    //    bag->GetGridGroup()->AddGrid(1, 0, new Grid());
+    //    bag->GetGridGroup()->AddGrid(2, 0, new Grid());
+    //    bag->GetGridGroup()->AddGrid(2, 1, new Grid());
+    //    bag->GetGridGroup()->AddGrid(2, 2, new Grid());
+    //    bag->GetGridGroup()->AddGrid(1, 2, new Grid());
+    //    bag->GetGridGroup()->AddGrid(0, 2, new Grid());
+    //    bag->GetGridGroup()->AddGrid(0, 3, new Grid());
+    //    bag->GetGridGroup()->AddGrid(0, 4, new Grid());
+    //    bag->GetGridGroup()->AddGrid(1, 4, new Grid());
+    //    bag->GetGridGroup()->AddGrid(2, 4, new Grid());
+    //    backpackPlacer.AddBag(bag);
+    //}
 
     {
         auto bag = new Bag(bagId++);
         bag->GetGridGroup()->AddGrid(0, 0, new Grid());
-        bag->GetGridGroup()->AddGrid(0, 1, new Grid());
         bag->GetGridGroup()->AddGrid(1, 0, new Grid());
-        bag->GetGridGroup()->AddGrid(1, 1, new Grid());
-        bag->GetGridGroup()->AddGrid(2, 1, new Grid());
-        bag->GetGridGroup()->AddGrid(1, 2, new Grid());
-        bag->GetGridGroup()->AddGrid(2, 2, new Grid());
-        backpackPlacer.AddBag(bag);
-    }
-
-    {
-        auto bag = new Bag(bagId++);
-        bag->GetGridGroup()->AddGrid(0, 0, new Grid());
-        bag->GetGridGroup()->AddGrid(0, 1, new Grid());
-        bag->GetGridGroup()->AddGrid(1, 0, new Grid());
-        bag->GetGridGroup()->AddGrid(1, 1, new Grid());
-        bag->GetGridGroup()->AddGrid(2, 1, new Grid());
-        bag->GetGridGroup()->AddGrid(1, 2, new Grid());
-        bag->GetGridGroup()->AddGrid(2, 2, new Grid());
-        backpackPlacer.AddBag(bag);
-    }
-
-    {
-        auto bag = new Bag(bagId++);
-        bag->GetGridGroup()->AddGrid(0, 0, new Grid());
-        bag->GetGridGroup()->AddGrid(0, 1, new Grid());
-        bag->GetGridGroup()->AddGrid(0, 2, new Grid());
-        bag->GetGridGroup()->AddGrid(1, 0, new Grid());
-        bag->GetGridGroup()->AddGrid(1, 1, new Grid());
-        bag->GetGridGroup()->AddGrid(1, 2, new Grid());
         bag->GetGridGroup()->AddGrid(2, 0, new Grid());
-        bag->GetGridGroup()->AddGrid(2, 1, new Grid());
-        bag->GetGridGroup()->AddGrid(2, 2, new Grid());
-        backpackPlacer.AddBag(bag);
-    }
-
-    {
-        auto bag = new Bag(bagId++);
-        bag->GetGridGroup()->AddGrid(0, 0, new Grid());
-        bag->GetGridGroup()->AddGrid(0, 1, new Grid());
-        bag->GetGridGroup()->AddGrid(0, 2, new Grid());
-        bag->GetGridGroup()->AddGrid(1, 0, new Grid());
-        bag->GetGridGroup()->AddGrid(1, 1, new Grid());
-        bag->GetGridGroup()->AddGrid(1, 2, new Grid());
-        bag->GetGridGroup()->AddGrid(2, 0, new Grid());
-        bag->GetGridGroup()->AddGrid(2, 1, new Grid());
-        bag->GetGridGroup()->AddGrid(2, 2, new Grid());
         bag->GetGridGroup()->AddGrid(3, 0, new Grid());
-        bag->GetGridGroup()->AddGrid(3, 1, new Grid());
-        bag->GetGridGroup()->AddGrid(3, 2, new Grid());
-        backpackPlacer.AddBag(bag);
-    }
-
-    {
-        auto bag = new Bag(bagId++);
-        bag->GetGridGroup()->AddGrid(0, 0, new Grid());
+        bag->GetGridGroup()->AddGrid(4, 0, new Grid());
+        bag->GetGridGroup()->AddGrid(0, 4, new Grid());
+        bag->GetGridGroup()->AddGrid(1, 4, new Grid());
+        bag->GetGridGroup()->AddGrid(2, 4, new Grid());
+        bag->GetGridGroup()->AddGrid(3, 4, new Grid());
+        bag->GetGridGroup()->AddGrid(4, 4, new Grid());
         bag->GetGridGroup()->AddGrid(0, 1, new Grid());
         bag->GetGridGroup()->AddGrid(0, 2, new Grid());
-        bag->GetGridGroup()->AddGrid(1, 0, new Grid());
-        bag->GetGridGroup()->AddGrid(1, 1, new Grid());
-        bag->GetGridGroup()->AddGrid(1, 2, new Grid());
-        bag->GetGridGroup()->AddGrid(2, 0, new Grid());
+        bag->GetGridGroup()->AddGrid(0, 3, new Grid());
         bag->GetGridGroup()->AddGrid(2, 1, new Grid());
         bag->GetGridGroup()->AddGrid(2, 2, new Grid());
-        bag->GetGridGroup()->AddGrid(3, 0, new Grid());
-        bag->GetGridGroup()->AddGrid(3, 1, new Grid());
-        bag->GetGridGroup()->AddGrid(3, 2, new Grid());
+        bag->GetGridGroup()->AddGrid(2, 3, new Grid());
+        bag->GetGridGroup()->AddGrid(4, 1, new Grid());
+        bag->GetGridGroup()->AddGrid(4, 2, new Grid());
+        bag->GetGridGroup()->AddGrid(4, 3, new Grid());
         backpackPlacer.AddBag(bag);
     }
 
